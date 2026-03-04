@@ -53,6 +53,8 @@ function App() {
   const [diaryTitle, setDiaryTitle] = useState('')
   const [diaryContent, setDiaryContent] = useState('')
   const [openedDiary, setOpenedDiary] = useState<{ dateLabel: string; entry: DiaryEntry } | null>(null)
+  const [bulkModeWeekId, setBulkModeWeekId] = useState<string | null>(null)
+  const [bulkSelected, setBulkSelected] = useState<Record<string, boolean>>({})
 
   const weekDates = useMemo(() => {
     const start = new Date()
@@ -94,6 +96,11 @@ function App() {
     const payload: PersistedState = { theme, goalType, rootGoal, weekGoals, selectedWeekId, openAIKey, diariesByDate }
     localStorage.setItem(STORAGE_KEY, JSON.stringify(payload))
   }, [theme, goalType, rootGoal, weekGoals, selectedWeekId, openAIKey, diariesByDate])
+
+  useEffect(() => {
+    setBulkModeWeekId(null)
+    setBulkSelected({})
+  }, [selectedWeekId])
 
   const addWeek = () => {
     if (!weekTitle.trim()) return
@@ -149,6 +156,49 @@ function App() {
         }
       }),
     )
+  }
+
+  const startBulkSelect = (weekId: string, dayNum: number, taskId: string) => {
+    setBulkModeWeekId(weekId)
+    setBulkSelected({ [`${dayNum}-${taskId}`]: true })
+    setWeekGoals((prev) =>
+      prev.map((w) => ({
+        ...w,
+        days: w.days.map((d) => ({ ...d, tasks: d.tasks.map((t) => ({ ...t, selecting: false })) })),
+      })),
+    )
+  }
+
+  const toggleBulkTask = (dayNum: number, taskId: string) => {
+    const key = `${dayNum}-${taskId}`
+    setBulkSelected((prev) => ({ ...prev, [key]: !prev[key] }))
+  }
+
+  const applyBulkStatus = (mode: 'done' | 'failed') => {
+    if (!bulkModeWeekId) return
+    setWeekGoals((prev) =>
+      prev.map((w) => {
+        if (w.id !== bulkModeWeekId) return w
+        return {
+          ...w,
+          days: w.days.map((d) => ({
+            ...d,
+            tasks: d.tasks.map((t) => {
+              const key = `${d.day}-${t.id}`
+              if (!bulkSelected[key]) return t
+              return { ...t, done: mode === 'done', failed: mode === 'failed', selecting: false }
+            }),
+          })),
+        }
+      }),
+    )
+    setBulkSelected({})
+    setBulkModeWeekId(null)
+  }
+
+  const cancelBulk = () => {
+    setBulkSelected({})
+    setBulkModeWeekId(null)
   }
 
   const toggleTaskSelecting = (weekId: string, dayNum: number, taskId: string) => {
@@ -357,7 +407,18 @@ function App() {
             {!selectedWeek ? (
               <p>请先选择一个周目标</p>
             ) : (
-              <div className="week-grid">
+              <>
+                {bulkModeWeekId === selectedWeek.id && (
+                  <div className="bulk-bar">
+                    <span>多选模式（已选 {Object.values(bulkSelected).filter(Boolean).length} 项）</span>
+                    <div>
+                      <button onClick={() => applyBulkStatus('done')}>批量✅</button>
+                      <button onClick={() => applyBulkStatus('failed')}>批量❌</button>
+                      <button onClick={cancelBulk}>退出</button>
+                    </div>
+                  </div>
+                )}
+                <div className="week-grid">
                 {selectedWeek.days.map((d) => {
                   const actual = weekDates[d.day - 1]
                   const key = dateKey(actual)
@@ -372,18 +433,32 @@ function App() {
                             <div className={`task ${t.done ? 'done' : ''} ${t.failed ? 'failed' : ''}`} key={t.id}>
                               <span>{t.text}</span>
                               <div className="task-status">
-                                <button className="status-box-btn" onClick={() => toggleTaskSelecting(selectedWeek.id, d.day, t.id)}>
-                                  {t.done ? '✅' : t.failed ? '❌' : '□'}
-                                </button>
-                                {t.selecting && (
-                                  <div className="status-pop">
-                                    <button className="status-choice" onClick={() => markTask(selectedWeek.id, d.day, t.id, 'done')}>
-                                      ✅
+                                {bulkModeWeekId === selectedWeek.id ? (
+                                  <button
+                                    className="status-box-btn"
+                                    onClick={() => toggleBulkTask(d.day, t.id)}
+                                  >
+                                    {bulkSelected[`${d.day}-${t.id}`] ? '☑️' : '☐'}
+                                  </button>
+                                ) : (
+                                  <>
+                                    <button className="status-box-btn" onClick={() => toggleTaskSelecting(selectedWeek.id, d.day, t.id)}>
+                                      {t.done ? '✅' : t.failed ? '❌' : '□'}
                                     </button>
-                                    <button className="status-choice" onClick={() => markTask(selectedWeek.id, d.day, t.id, 'failed')}>
-                                      ❌
-                                    </button>
-                                  </div>
+                                    {t.selecting && (
+                                      <div className="status-pop">
+                                        <button className="status-choice" onClick={() => markTask(selectedWeek.id, d.day, t.id, 'done')}>
+                                          ✅
+                                        </button>
+                                        <button className="status-choice" onClick={() => markTask(selectedWeek.id, d.day, t.id, 'failed')}>
+                                          ❌
+                                        </button>
+                                        <button className="status-choice text" onClick={() => startBulkSelect(selectedWeek.id, d.day, t.id)}>
+                                          多选
+                                        </button>
+                                      </div>
+                                    )}
+                                  </>
                                 )}
                               </div>
                             </div>
@@ -416,6 +491,7 @@ function App() {
                   )
                 })}
               </div>
+              </>
             )}
           </section>
         </>
