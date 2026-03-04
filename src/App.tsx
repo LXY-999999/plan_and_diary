@@ -152,22 +152,33 @@ function App() {
   }
 
   const toggleTaskSelecting = (weekId: string, dayNum: number, taskId: string) => {
-    setWeekGoals((prev) =>
-      prev.map((w) => {
-        if (w.id !== weekId) return w
+    setWeekGoals((prev) => {
+      const current = prev
+        .find((w) => w.id === weekId)
+        ?.days.find((d) => d.day === dayNum)
+        ?.tasks.find((t) => t.id === taskId)
+      const shouldOpen = !current?.selecting
+
+      return prev.map((w) => {
+        if (w.id !== weekId) {
+          return {
+            ...w,
+            days: w.days.map((d) => ({ ...d, tasks: d.tasks.map((t) => ({ ...t, selecting: false })) })),
+          }
+        }
+
         return {
           ...w,
-          days: w.days.map((d) =>
-            d.day !== dayNum
-              ? d
-              : {
-                  ...d,
-                  tasks: d.tasks.map((t) => (t.id !== taskId ? t : { ...t, selecting: !t.selecting })),
-                },
-          ),
+          days: w.days.map((d) => ({
+            ...d,
+            tasks: d.tasks.map((t) => {
+              if (d.day === dayNum && t.id === taskId) return { ...t, selecting: shouldOpen }
+              return { ...t, selecting: false }
+            }),
+          })),
         }
-      }),
-    )
+      })
+    })
   }
 
   const autoGenerateWeek = async () => {
