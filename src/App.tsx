@@ -341,9 +341,20 @@ function App() {
                           {d.tasks.filter((t) => t.slot === s).map((t) => (
                             <div className={`task ${t.done ? 'done' : ''} ${t.failed ? 'failed' : ''}`} key={t.id}>
                               <span>{t.text}</span>
-                              <div>
-                                <button onClick={() => markTask(selectedWeek.id, d.day, t.id, 'done')}>✅</button>
-                                <button onClick={() => markTask(selectedWeek.id, d.day, t.id, 'failed')}>❌</button>
+                              <div className="task-status">
+                                <span className="status-box">{t.done ? '✓' : t.failed ? '✕' : '□'}</span>
+                                <button
+                                  className={`status-btn ${t.done ? 'active' : ''}`}
+                                  onClick={() => markTask(selectedWeek.id, d.day, t.id, 'done')}
+                                >
+                                  ✓
+                                </button>
+                                <button
+                                  className={`status-btn ${t.failed ? 'active' : ''}`}
+                                  onClick={() => markTask(selectedWeek.id, d.day, t.id, 'failed')}
+                                >
+                                  ✕
+                                </button>
                               </div>
                             </div>
                           ))}
