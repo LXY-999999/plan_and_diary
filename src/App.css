@@ -28,6 +28,23 @@ button:hover { opacity:.9; }
 .diary-link-btn { text-align:left; padding:6px 8px; border-radius:8px; border:1px dashed #bbb; background:#fff !important; color:#333 !important; }
 .diary-link-btn:hover { border-color:#888; }
 .diary-detail { margin-top:12px; border-top:1px solid #eee; padding-top:10px; white-space:pre-wrap; }
+.page-bottom-pad { padding-bottom: 72px; }
+.bottom-nav {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  padding: 10px 12px calc(10px + env(safe-area-inset-bottom));
+  background: rgba(255,255,255,.96);
+  backdrop-filter: blur(8px);
+  border-top: 1px solid #ececec;
+  z-index: 30;
+}
+.bottom-nav button { font-weight: 600; }
+.bottom-nav button.active { box-shadow: 0 0 0 2px rgba(0,0,0,.08) inset; }
 
 .app.genki { --accent:#ff5a8a; }
 .app.genki h1 { color: var(--accent); }
