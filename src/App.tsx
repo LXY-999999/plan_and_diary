@@ -153,10 +153,16 @@ function App() {
   }
 
   const addDiary = () => {
-    if (!diaryTitle.trim() || !diaryContent.trim()) return
+    if (!diaryContent.trim()) return
     const targetDate = weekDates[diaryDay - 1]
     const key = dateKey(targetDate)
-    const entry: DiaryEntry = { id: uuid(), title: diaryTitle.trim(), content: diaryContent.trim(), createdAt: Date.now() }
+    const autoTitle = diaryContent.trim().slice(0, 14) + (diaryContent.trim().length > 14 ? '...' : '')
+    const entry: DiaryEntry = {
+      id: uuid(),
+      title: diaryTitle.trim() || autoTitle,
+      content: diaryContent.trim(),
+      createdAt: Date.now(),
+    }
     setDiariesByDate((prev) => ({ ...prev, [key]: [entry, ...(prev[key] || [])] }))
     setDiaryTitle('')
     setDiaryContent('')
@@ -607,32 +613,41 @@ function App() {
         </>
       ) : (
         <section className="panel diary-page page-bottom-pad">
-          <h2>📔 Diary 页面（独立）</h2>
-          <div className="row">
-            <select value={diaryDay} onChange={(e) => setDiaryDay(Number(e.target.value))}>
-              {weekDates.map((d, i) => (
-                <option key={i + 1} value={i + 1}>保存到 {d.getMonth() + 1}月{d.getDate()}日（晚上）</option>
-              ))}
-            </select>
-            <input value={diaryTitle} onChange={(e) => setDiaryTitle(e.target.value)} placeholder="日记标题" />
+          <div className="diary-page-head">
+            <h2>icity · 我的日记</h2>
+            <button className="search-toggle-btn" onClick={() => setDiarySearchOpen((v) => !v)}>🔍</button>
           </div>
-          <textarea value={diaryContent} onChange={(e) => setDiaryContent(e.target.value)} rows={8} placeholder="写今天的日记内容..." />
-          <div className="row">
-            <button onClick={addDiary}>保存日记</button>
-            <button
-              onClick={() => {
-                setDiaryTitle('')
-                setDiaryContent('')
-              }}
-            >
-              清空编辑
-            </button>
+
+          <div className="compose-card">
+            <div className="compose-top">
+              <div className="avatar-dot">🍩</div>
+              <select value={diaryDay} onChange={(e) => setDiaryDay(Number(e.target.value))}>
+                {weekDates.map((d, i) => (
+                  <option key={i + 1} value={i + 1}>保存到 {d.getMonth() + 1}月{d.getDate()}日（晚上）</option>
+                ))}
+              </select>
+            </div>
+            <input value={diaryTitle} onChange={(e) => setDiaryTitle(e.target.value)} placeholder="标题（可选）" />
+            <textarea value={diaryContent} onChange={(e) => setDiaryContent(e.target.value)} rows={8} placeholder="写点什么吧" />
+            <div className="compose-actions">
+              <span className="muted">🔒 私密</span>
+              <div className="row">
+                <button
+                  onClick={() => {
+                    setDiaryTitle('')
+                    setDiaryContent('')
+                  }}
+                >
+                  清空
+                </button>
+                <button onClick={addDiary}>发送</button>
+              </div>
+            </div>
           </div>
 
           <div className="diary-search">
             <div className="diary-search-head">
               <h3>历史日记</h3>
-              <button className="search-toggle-btn" onClick={() => setDiarySearchOpen((v) => !v)}>🔍 搜索</button>
             </div>
 
             {diarySearchOpen && (
