@@ -73,6 +73,10 @@ function App() {
   const [appliedDiarySearch, setAppliedDiarySearch] = useState({ year: '', month: '', day: '' })
   const [bulkModeWeekId, setBulkModeWeekId] = useState<string | null>(null)
   const [bulkSelected, setBulkSelected] = useState<Record<string, boolean>>({})
+  const [editingDiaryKey, setEditingDiaryKey] = useState<string | null>(null)
+  const [editingDiaryId, setEditingDiaryId] = useState<string | null>(null)
+  const [editingDiaryTitle, setEditingDiaryTitle] = useState('')
+  const [editingDiaryContent, setEditingDiaryContent] = useState('')
 
   const weekDates = useMemo(() => {
     const start = new Date()
@@ -214,6 +218,34 @@ function App() {
       else cloned[dateStorageKey] = next
       return cloned
     })
+  }
+
+  const startEditDiary = (dateStorageKey: string, entry: DiaryEntry) => {
+    setEditingDiaryKey(dateStorageKey)
+    setEditingDiaryId(entry.id)
+    setEditingDiaryTitle(entry.title)
+    setEditingDiaryContent(entry.content)
+  }
+
+  const saveEditDiary = () => {
+    if (!editingDiaryKey || !editingDiaryId) return
+    setDiariesByDate((prev) => ({
+      ...prev,
+      [editingDiaryKey]: (prev[editingDiaryKey] || []).map((x) =>
+        x.id !== editingDiaryId ? x : { ...x, title: editingDiaryTitle.trim() || x.title, content: editingDiaryContent.trim() || x.content },
+      ),
+    }))
+    setEditingDiaryKey(null)
+    setEditingDiaryId(null)
+    setEditingDiaryTitle('')
+    setEditingDiaryContent('')
+  }
+
+  const cancelEditDiary = () => {
+    setEditingDiaryKey(null)
+    setEditingDiaryId(null)
+    setEditingDiaryTitle('')
+    setEditingDiaryContent('')
   }
 
   const addDiary = () => {
@@ -784,33 +816,53 @@ function App() {
             {diaryHistory.length === 0 ? (
               <p className="muted">没有匹配到记录</p>
             ) : (
-              diaryHistory.map((item) => (
-                <div className="diary-detail" key={`${item.key}-${item.entry.id}`}>
-                  <div className="diary-item-head">
-                    <h3>{item.entry.title}</h3>
-                    <button className="delete-btn" onClick={() => deleteDiary(item.key, item.entry.id)}>删除</button>
+              diaryHistory.map((item) => {
+                const isEditing = editingDiaryKey === item.key && editingDiaryId === item.entry.id
+                return (
+                  <div className="diary-detail" key={`${item.key}-${item.entry.id}`}>
+                    <div className="diary-item-head">
+                      <h3>{item.entry.title}</h3>
+                      <div className="row">
+                        <button className="edit-btn" onClick={() => startEditDiary(item.key, item.entry)}>编辑</button>
+                        <button className="delete-btn" onClick={() => deleteDiary(item.key, item.entry.id)}>删除</button>
+                      </div>
+                    </div>
+                    <small>
+                      {item.dateLabel} · {new Date(item.entry.createdAt).toLocaleString()}
+                    </small>
+
+                    {isEditing ? (
+                      <div className="edit-box">
+                        <input value={editingDiaryTitle} onChange={(e) => setEditingDiaryTitle(e.target.value)} placeholder="标题" />
+                        <textarea value={editingDiaryContent} onChange={(e) => setEditingDiaryContent(e.target.value)} rows={4} />
+                        <div className="row">
+                          <button onClick={saveEditDiary}>保存</button>
+                          <button onClick={cancelEditDiary}>取消</button>
+                        </div>
+                      </div>
+                    ) : (
+                      <>
+                        {item.entry.location && <div className="muted">📍 {item.entry.location}</div>}
+                        <p>{item.entry.content}</p>
+                        {!!item.entry.images?.length && (
+                          <div className="media-grid">
+                            {item.entry.images.map((src, idx) => (
+                              <img key={idx} src={src} alt="diary" />
+                            ))}
+                          </div>
+                        )}
+                        {!!item.entry.videos?.length && (
+                          <div className="media-grid">
+                            {item.entry.videos.map((src, idx) => (
+                              <video key={idx} src={src} controls />
+                            ))}
+                          </div>
+                        )}
+                      </>
+                    )}
                   </div>
-                  <small>
-                    {item.dateLabel} · {new Date(item.entry.createdAt).toLocaleString()}
-                  </small>
-                  {item.entry.location && <div className="muted">📍 {item.entry.location}</div>}
-                  <p>{item.entry.content}</p>
-                  {!!item.entry.images?.length && (
-                    <div className="media-grid">
-                      {item.entry.images.map((src, idx) => (
-                        <img key={idx} src={src} alt="diary" />
-                      ))}
-                    </div>
-                  )}
-                  {!!item.entry.videos?.length && (
-                    <div className="media-grid">
-                      {item.entry.videos.map((src, idx) => (
-                        <video key={idx} src={src} controls />
-                      ))}
-                    </div>
-                  )}
-                </div>
-              ))
+                )
+              })
             )}
           </div>
 
