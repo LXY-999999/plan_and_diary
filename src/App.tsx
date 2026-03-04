@@ -337,7 +337,7 @@ function App() {
                       <h3>{actual.getMonth() + 1}月{actual.getDate()}日</h3>
                       {(['上午', '下午', '晚上'] as Slot[]).map((s) => (
                         <div key={s}>
-                          <h4>{s === '晚上' ? '晚上 + 日记' : s}</h4>
+                          <h4>{s}</h4>
                           {d.tasks.filter((t) => t.slot === s).map((t) => (
                             <div className={`task ${t.done ? 'done' : ''} ${t.failed ? 'failed' : ''}`} key={t.id}>
                               <span>{t.text}</span>
@@ -347,29 +347,30 @@ function App() {
                               </div>
                             </div>
                           ))}
-
-                          {s === '晚上' && (
-                            <div className="diary-links">
-                              {dayDiaries.length === 0 ? (
-                                <small>暂无日记</small>
-                              ) : (
-                                dayDiaries.map((entry) => (
-                                  <button
-                                    className="diary-link-btn"
-                                    key={entry.id}
-                                    onClick={() => {
-                                      setOpenedDiary({ dateLabel: `${actual.getMonth() + 1}月${actual.getDate()}日`, entry })
-                                      setPage('diary')
-                                    }}
-                                  >
-                                    {entry.title}
-                                  </button>
-                                ))
-                              )}
-                            </div>
-                          )}
                         </div>
                       ))}
+
+                      <div>
+                        <h4>日记</h4>
+                        <div className="diary-links">
+                          {dayDiaries.length === 0 ? (
+                            <small>暂无日记</small>
+                          ) : (
+                            dayDiaries.map((entry) => (
+                              <button
+                                className="diary-link-btn"
+                                key={entry.id}
+                                onClick={() => {
+                                  setOpenedDiary({ dateLabel: `${actual.getMonth() + 1}月${actual.getDate()}日`, entry })
+                                  setPage('diary')
+                                }}
+                              >
+                                {entry.title}
+                              </button>
+                            ))
+                          )}
+                        </div>
+                      </div>
                     </div>
                   )
                 })}
