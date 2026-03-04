@@ -57,6 +57,7 @@ function App() {
   const [diarySearchYear, setDiarySearchYear] = useState('')
   const [diarySearchMonth, setDiarySearchMonth] = useState('')
   const [diarySearchDay, setDiarySearchDay] = useState('')
+  const [diarySearchOpen, setDiarySearchOpen] = useState(false)
   const [appliedDiarySearch, setAppliedDiarySearch] = useState({ year: '', month: '', day: '' })
   const [bulkModeWeekId, setBulkModeWeekId] = useState<string | null>(null)
   const [bulkSelected, setBulkSelected] = useState<Record<string, boolean>>({})
@@ -629,23 +630,33 @@ function App() {
           </div>
 
           <div className="diary-search">
-            <h3>历史日记</h3>
-            <div className="row">
-              <input value={diarySearchYear} onChange={(e) => setDiarySearchYear(e.target.value)} placeholder="年，如 2026" />
-              <input value={diarySearchMonth} onChange={(e) => setDiarySearchMonth(e.target.value)} placeholder="月，如 3" />
-              <input value={diarySearchDay} onChange={(e) => setDiarySearchDay(e.target.value)} placeholder="日，如 4" />
-              <button onClick={() => setAppliedDiarySearch({ year: diarySearchYear, month: diarySearchMonth, day: diarySearchDay })}>搜索</button>
-              <button
-                onClick={() => {
-                  setDiarySearchYear('')
-                  setDiarySearchMonth('')
-                  setDiarySearchDay('')
-                  setAppliedDiarySearch({ year: '', month: '', day: '' })
-                }}
-              >
-                清空
-              </button>
+            <div className="diary-search-head">
+              <h3>历史日记</h3>
+              <button className="search-toggle-btn" onClick={() => setDiarySearchOpen((v) => !v)}>🔍 搜索</button>
             </div>
+
+            {diarySearchOpen && (
+              <div className="search-mini-box">
+                <div className="row">
+                  <input value={diarySearchYear} onChange={(e) => setDiarySearchYear(e.target.value)} placeholder="年，如 2026" />
+                  <input value={diarySearchMonth} onChange={(e) => setDiarySearchMonth(e.target.value)} placeholder="月，如 3" />
+                  <input value={diarySearchDay} onChange={(e) => setDiarySearchDay(e.target.value)} placeholder="日，如 4" />
+                </div>
+                <div className="row">
+                  <button onClick={() => setAppliedDiarySearch({ year: diarySearchYear, month: diarySearchMonth, day: diarySearchDay })}>应用搜索</button>
+                  <button
+                    onClick={() => {
+                      setDiarySearchYear('')
+                      setDiarySearchMonth('')
+                      setDiarySearchDay('')
+                      setAppliedDiarySearch({ year: '', month: '', day: '' })
+                    }}
+                  >
+                    清空
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
 
           <div className="diary-history-list">
