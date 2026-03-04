@@ -22,6 +22,12 @@ button:hover { opacity:.9; }
 .task.done { border-color:#57c96f; background:#f1fff4; }
 .task.failed { border-color:#f28b82; background:#fff3f2; }
 .theme-switch button { margin-left: 8px; }
+.diary-page textarea { width: 100%; margin: 10px 0; }
+.muted { color:#666; font-size:13px; }
+.diary-links { display:flex; flex-direction:column; gap:6px; margin:6px 0 10px; }
+.diary-link-btn { text-align:left; padding:6px 8px; border-radius:8px; border:1px dashed #bbb; background:#fff !important; color:#333 !important; }
+.diary-link-btn:hover { border-color:#888; }
+.diary-detail { margin-top:12px; border-top:1px solid #eee; padding-top:10px; white-space:pre-wrap; }
 
 .app.genki { --accent:#ff5a8a; }
 .app.genki h1 { color: var(--accent); }

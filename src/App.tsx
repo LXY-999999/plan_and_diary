@@ -5,10 +5,12 @@ import 'reactflow/dist/style.css'
 
 type Slot = '上午' | '下午' | '晚上'
 type DayTask = { id: string; text: string; slot: Slot; done?: boolean; failed?: boolean }
-type DayPlan = { day: number; tasks: DayTask[] }
+type DiaryEntry = { id: string; title: string; content: string; createdAt: number }
+type DayPlan = { day: number; tasks: DayTask[]; diaries: DiaryEntry[] }
 type WeekGoal = { id: string; title: string; days: DayPlan[] }
 type Theme = 'genki' | 'mint'
 type GoalType = '年目标' | '月目标'
+type Page = 'plan' | 'diary'
 
 type PersistedState = {
   theme: Theme
@@ -21,7 +23,7 @@ type PersistedState = {
 
 const STORAGE_KEY = 'plan_and_diary_v1'
 
-const emptyDays = (): DayPlan[] => Array.from({ length: 7 }, (_, i) => ({ day: i + 1, tasks: [] }))
+const emptyDays = (): DayPlan[] => Array.from({ length: 7 }, (_, i) => ({ day: i + 1, tasks: [], diaries: [] }))
 const uuid = () => Math.random().toString(36).slice(2, 10)
 
 function App() {
@@ -42,6 +44,12 @@ function App() {
   const [autoPrompt, setAutoPrompt] = useState('')
   const [loadingAI, setLoadingAI] = useState(false)
 
+  const [page, setPage] = useState<Page>('plan')
+  const [diaryDay, setDiaryDay] = useState(1)
+  const [diaryTitle, setDiaryTitle] = useState('')
+  const [diaryContent, setDiaryContent] = useState('')
+  const [openedDiary, setOpenedDiary] = useState<{ day: number; entry: DiaryEntry } | null>(null)
+
   useEffect(() => {
     try {
       const raw = localStorage.getItem(STORAGE_KEY)
@@ -50,7 +58,17 @@ function App() {
       if (data.theme) setTheme(data.theme)
       if (data.goalType) setGoalType(data.goalType)
       if (typeof data.rootGoal === 'string') setRootGoal(data.rootGoal)
-      if (Array.isArray(data.weekGoals)) setWeekGoals(data.weekGoals)
+      if (Array.isArray(data.weekGoals)) {
+        const normalized = data.weekGoals.map((w) => ({
+          ...w,
+          days: (w.days || emptyDays()).map((d, i) => ({
+            day: typeof d.day === 'number' ? d.day : i + 1,
+            tasks: Array.isArray(d.tasks) ? d.tasks : [],
+            diaries: Array.isArray((d as any).diaries) ? (d as any).diaries : [],
+          })),
+        }))
+        setWeekGoals(normalized)
+      }
       if (typeof data.selectedWeekId === 'string') setSelectedWeekId(data.selectedWeekId)
       if (typeof data.openAIKey === 'string') setOpenAIKey(data.openAIKey)
     } catch (e) {
@@ -62,6 +80,11 @@ function App() {
     const payload: PersistedState = { theme, goalType, rootGoal, weekGoals, selectedWeekId, openAIKey }
     localStorage.setItem(STORAGE_KEY, JSON.stringify(payload))
   }, [theme, goalType, rootGoal, weekGoals, selectedWeekId, openAIKey])
+
+  useEffect(() => {
+    setDiaryDay(1)
+    setOpenedDiary(null)
+  }, [selectedWeekId])
 
   const addWeek = () => {
     if (!weekTitle.trim()) return
@@ -85,6 +108,36 @@ function App() {
       }),
     )
     setTaskInput('')
+  }
+
+  const addDiary = () => {
+    if (!selectedWeek || !diaryTitle.trim() || !diaryContent.trim()) return
+    const entry: DiaryEntry = {
+      id: uuid(),
+      title: diaryTitle.trim(),
+      content: diaryContent.trim(),
+      createdAt: Date.now(),
+    }
+
+    setWeekGoals((prev) =>
+      prev.map((w) => {
+        if (w.id !== selectedWeek.id) return w
+        return {
+          ...w,
+          days: w.days.map((d) =>
+            d.day !== diaryDay
+              ? d
+              : {
+                  ...d,
+                  diaries: [entry, ...d.diaries],
+                },
+          ),
+        }
+      }),
+    )
+    setDiaryTitle('')
+    setDiaryContent('')
+    setOpenedDiary({ day: diaryDay, entry })
   }
 
   const markTask = (weekId: string, dayNum: number, taskId: string, mode: 'done' | 'failed') => {
@@ -182,6 +235,11 @@ function App() {
     setTaskInput('')
     setOpenAIKey('')
     setAutoPrompt('')
+    setPage('plan')
+    setDiaryDay(1)
+    setDiaryTitle('')
+    setDiaryContent('')
+    setOpenedDiary(null)
   }
 
   const flow = useMemo(() => {
@@ -212,102 +270,175 @@ function App() {
         <div className="theme-switch">
           <button onClick={() => setTheme('genki')}>元气</button>
           <button onClick={() => setTheme('mint')}>薄荷</button>
+          <button onClick={() => setPage((p) => (p === 'plan' ? 'diary' : 'plan'))}>{page === 'plan' ? '📔 日记页' : '📋 计划页'}</button>
           <button onClick={clearAll}>清空数据</button>
         </div>
       </header>
 
-      <section className="panel">
-        <h2>1) 目标入口</h2>
-        <div className="row">
-          <select value={goalType} onChange={(e) => setGoalType(e.target.value as GoalType)}>
-            <option value="年目标">年目标</option>
-            <option value="月目标">月目标</option>
-          </select>
-          <input value={rootGoal} onChange={(e) => setRootGoal(e.target.value)} placeholder="输入你的目标" />
-        </div>
-      </section>
+      {page === 'plan' ? (
+        <>
+          <section className="panel">
+            <h2>1) 目标入口</h2>
+            <div className="row">
+              <select value={goalType} onChange={(e) => setGoalType(e.target.value as GoalType)}>
+                <option value="年目标">年目标</option>
+                <option value="月目标">月目标</option>
+              </select>
+              <input value={rootGoal} onChange={(e) => setRootGoal(e.target.value)} placeholder="输入你的目标" />
+            </div>
+          </section>
 
-      <section className="panel">
-        <h2>2) 月/年 → 周目标</h2>
-        <div className="row">
-          <input value={weekTitle} onChange={(e) => setWeekTitle(e.target.value)} placeholder="新增周目标" />
-          <button onClick={addWeek}>添加周目标</button>
-        </div>
-        <div className="chips">
-          {weekGoals.map((w) => (
-            <button key={w.id} className={selectedWeekId === w.id ? 'chip active' : 'chip'} onClick={() => setSelectedWeekId(w.id)}>
-              {w.title}
-            </button>
-          ))}
-        </div>
-      </section>
+          <section className="panel">
+            <h2>2) 月/年 → 周目标</h2>
+            <div className="row">
+              <input value={weekTitle} onChange={(e) => setWeekTitle(e.target.value)} placeholder="新增周目标" />
+              <button onClick={addWeek}>添加周目标</button>
+            </div>
+            <div className="chips">
+              {weekGoals.map((w) => (
+                <button key={w.id} className={selectedWeekId === w.id ? 'chip active' : 'chip'} onClick={() => setSelectedWeekId(w.id)}>
+                  {w.title}
+                </button>
+              ))}
+            </div>
+          </section>
 
-      <section className="panel">
-        <h2>3) 周 → 日(早中晚)</h2>
-        <div className="row">
-          <select value={day} onChange={(e) => setDay(Number(e.target.value))}>
-            {Array.from({ length: 7 }, (_, i) => (
-              <option key={i + 1} value={i + 1}>第{i + 1}天</option>
-            ))}
-          </select>
-          <select value={slot} onChange={(e) => setSlot(e.target.value as Slot)}>
-            <option>上午</option>
-            <option>下午</option>
-            <option>晚上</option>
-          </select>
-          <input value={taskInput} onChange={(e) => setTaskInput(e.target.value)} placeholder="手动添加任务" />
-          <button onClick={addTask}>添加任务</button>
-        </div>
+          <section className="panel">
+            <h2>3) 周 → 日(早中晚)</h2>
+            <div className="row">
+              <select value={day} onChange={(e) => setDay(Number(e.target.value))}>
+                {Array.from({ length: 7 }, (_, i) => (
+                  <option key={i + 1} value={i + 1}>第{i + 1}天</option>
+                ))}
+              </select>
+              <select value={slot} onChange={(e) => setSlot(e.target.value as Slot)}>
+                <option>上午</option>
+                <option>下午</option>
+                <option>晚上</option>
+              </select>
+              <input value={taskInput} onChange={(e) => setTaskInput(e.target.value)} placeholder="手动添加任务" />
+              <button onClick={addTask}>添加任务</button>
+            </div>
 
-        <details>
-          <summary>🤖 ChatGPT 自动拆解为 7 天（需 OpenAI Key）</summary>
-          <div className="row">
-            <input value={openAIKey} onChange={(e) => setOpenAIKey(e.target.value)} placeholder="OpenAI API Key" type="password" />
-          </div>
-          <textarea value={autoPrompt} onChange={(e) => setAutoPrompt(e.target.value)} placeholder="可选：自定义拆解提示词" rows={3} />
-          <button onClick={autoGenerateWeek} disabled={loadingAI}>{loadingAI ? '生成中...' : '自动生成7天早中晚'}</button>
-        </details>
-      </section>
+            <details>
+              <summary>🤖 ChatGPT 自动拆解为 7 天（需 OpenAI Key）</summary>
+              <div className="row">
+                <input value={openAIKey} onChange={(e) => setOpenAIKey(e.target.value)} placeholder="OpenAI API Key" type="password" />
+              </div>
+              <textarea value={autoPrompt} onChange={(e) => setAutoPrompt(e.target.value)} placeholder="可选：自定义拆解提示词" rows={3} />
+              <button onClick={autoGenerateWeek} disabled={loadingAI}>{loadingAI ? '生成中...' : '自动生成7天早中晚'}</button>
+            </details>
+          </section>
 
-      <section className="panel flow-wrap">
-        <h2>目标树可视化（思维导图）</h2>
-        <div className="flow">
-          <ReactFlow nodes={flow.nodes} edges={flow.edges} fitView>
-            <Background />
-            <Controls />
-            <MiniMap />
-          </ReactFlow>
-        </div>
-      </section>
+          <section className="panel flow-wrap">
+            <h2>目标树可视化（思维导图）</h2>
+            <div className="flow">
+              <ReactFlow nodes={flow.nodes} edges={flow.edges} fitView>
+                <Background />
+                <Controls />
+                <MiniMap />
+              </ReactFlow>
+            </div>
+          </section>
 
-      <section className="panel">
-        <h2>一周 To-Do（可打勾/打叉）</h2>
-        {!selectedWeek ? (
-          <p>请先选择一个周目标</p>
-        ) : (
-          <div className="week-grid">
-            {selectedWeek.days.map((d) => (
-              <div key={d.day} className="day-card">
-                <h3>Day {d.day}</h3>
-                {(['上午', '下午', '晚上'] as Slot[]).map((s) => (
-                  <div key={s}>
-                    <h4>{s}</h4>
-                    {d.tasks.filter((t) => t.slot === s).map((t) => (
-                      <div className={`task ${t.done ? 'done' : ''} ${t.failed ? 'failed' : ''}`} key={t.id}>
-                        <span>{t.text}</span>
-                        <div>
-                          <button onClick={() => markTask(selectedWeek.id, d.day, t.id, 'done')}>✅</button>
-                          <button onClick={() => markTask(selectedWeek.id, d.day, t.id, 'failed')}>❌</button>
-                        </div>
+          <section className="panel">
+            <h2>一周 To-Do（可打勾/打叉）</h2>
+            {!selectedWeek ? (
+              <p>请先选择一个周目标</p>
+            ) : (
+              <div className="week-grid">
+                {selectedWeek.days.map((d) => (
+                  <div key={d.day} className="day-card">
+                    <h3>Day {d.day}</h3>
+                    {(['上午', '下午', '晚上'] as Slot[]).map((s) => (
+                      <div key={s}>
+                        <h4>{s === '晚上' ? '晚上 + 日记' : s}</h4>
+                        {d.tasks.filter((t) => t.slot === s).map((t) => (
+                          <div className={`task ${t.done ? 'done' : ''} ${t.failed ? 'failed' : ''}`} key={t.id}>
+                            <span>{t.text}</span>
+                            <div>
+                              <button onClick={() => markTask(selectedWeek.id, d.day, t.id, 'done')}>✅</button>
+                              <button onClick={() => markTask(selectedWeek.id, d.day, t.id, 'failed')}>❌</button>
+                            </div>
+                          </div>
+                        ))}
+
+                        {s === '晚上' && (
+                          <div className="diary-links">
+                            {d.diaries.length === 0 ? (
+                              <small>暂无日记</small>
+                            ) : (
+                              d.diaries.map((entry) => (
+                                <button
+                                  className="diary-link-btn"
+                                  key={entry.id}
+                                  onClick={() => {
+                                    setOpenedDiary({ day: d.day, entry })
+                                    setPage('diary')
+                                  }}
+                                >
+                                  {entry.title}
+                                </button>
+                              ))
+                            )}
+                          </div>
+                        )}
                       </div>
                     ))}
                   </div>
                 ))}
               </div>
-            ))}
-          </div>
-        )}
-      </section>
+            )}
+          </section>
+        </>
+      ) : (
+        <section className="panel diary-page">
+          <h2>📔 Diary 页面</h2>
+          {!selectedWeek ? (
+            <p>请先回到计划页选择一个周目标，再写日记。</p>
+          ) : (
+            <>
+              <p className="muted">当前周目标：{selectedWeek.title}</p>
+              <div className="row">
+                <select value={diaryDay} onChange={(e) => setDiaryDay(Number(e.target.value))}>
+                  {Array.from({ length: 7 }, (_, i) => (
+                    <option key={i + 1} value={i + 1}>保存到 Day {i + 1}（晚上）</option>
+                  ))}
+                </select>
+                <input value={diaryTitle} onChange={(e) => setDiaryTitle(e.target.value)} placeholder="日记标题" />
+              </div>
+              <textarea
+                value={diaryContent}
+                onChange={(e) => setDiaryContent(e.target.value)}
+                rows={8}
+                placeholder="写今天的日记内容..."
+              />
+              <div className="row">
+                <button onClick={addDiary}>保存日记</button>
+                <button
+                  onClick={() => {
+                    setDiaryTitle('')
+                    setDiaryContent('')
+                    setOpenedDiary(null)
+                  }}
+                >
+                  清空编辑
+                </button>
+              </div>
+
+              {openedDiary && (
+                <div className="diary-detail">
+                  <h3>{openedDiary.entry.title}</h3>
+                  <small>
+                    Day {openedDiary.day} · {new Date(openedDiary.entry.createdAt).toLocaleString()}
+                  </small>
+                  <p>{openedDiary.entry.content}</p>
+                </div>
+              )}
+            </>
+          )}
+        </section>
+      )}
     </div>
   )
 }
