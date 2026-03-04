@@ -205,6 +205,17 @@ function App() {
     )
   }
 
+  const deleteDiary = (dateStorageKey: string, diaryId: string) => {
+    setDiariesByDate((prev) => {
+      const list = prev[dateStorageKey] || []
+      const next = list.filter((x) => x.id !== diaryId)
+      const cloned = { ...prev }
+      if (next.length === 0) delete cloned[dateStorageKey]
+      else cloned[dateStorageKey] = next
+      return cloned
+    })
+  }
+
   const addDiary = () => {
     if (!diaryContent.trim()) return
     const targetDate = weekDates[diaryDay - 1]
@@ -775,7 +786,10 @@ function App() {
             ) : (
               diaryHistory.map((item) => (
                 <div className="diary-detail" key={`${item.key}-${item.entry.id}`}>
-                  <h3>{item.entry.title}</h3>
+                  <div className="diary-item-head">
+                    <h3>{item.entry.title}</h3>
+                    <button className="delete-btn" onClick={() => deleteDiary(item.key, item.entry.id)}>删除</button>
+                  </div>
                   <small>
                     {item.dateLabel} · {new Date(item.entry.createdAt).toLocaleString()}
                   </small>

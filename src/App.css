@@ -64,6 +64,8 @@ button:hover { opacity:.9; }
 .diary-link-btn { text-align:left; padding:6px 8px; border-radius:8px; border:1px dashed #bbb; background:#fff !important; color:#333 !important; }
 .diary-link-btn:hover { border-color:#888; }
 .diary-detail { margin-top:12px; border-top:1px solid #eee; padding-top:10px; white-space:pre-wrap; }
+.diary-item-head { display:flex; justify-content:space-between; align-items:center; gap:8px; }
+.delete-btn { width:auto; padding:4px 8px; background:#fff0f0 !important; color:#c0392b !important; border:1px solid #f0c1c1 !important; }
 .page-bottom-pad { padding-bottom: 72px; }
 .bottom-nav {
   position: fixed;
