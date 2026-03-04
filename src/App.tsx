@@ -5,7 +5,15 @@ import 'reactflow/dist/style.css'
 
 type Slot = '上午' | '下午' | '晚上'
 type DayTask = { id: string; text: string; slot: Slot; done?: boolean; failed?: boolean; selecting?: boolean }
-type DiaryEntry = { id: string; title: string; content: string; createdAt: number }
+type DiaryEntry = {
+  id: string
+  title: string
+  content: string
+  createdAt: number
+  images?: string[]
+  videos?: string[]
+  location?: string
+}
 type DayPlan = { day: number; tasks: DayTask[] }
 type WeekGoal = { id: string; title: string; days: DayPlan[] }
 type Theme = 'genki' | 'mint'
@@ -54,6 +62,10 @@ function App() {
   const [diaryDay, setDiaryDay] = useState(1)
   const [diaryTitle, setDiaryTitle] = useState('')
   const [diaryContent, setDiaryContent] = useState('')
+  const [diaryExpanded, setDiaryExpanded] = useState(false)
+  const [diaryImages, setDiaryImages] = useState<string[]>([])
+  const [diaryVideos, setDiaryVideos] = useState<string[]>([])
+  const [diaryLocation, setDiaryLocation] = useState('')
   const [diarySearchYear, setDiarySearchYear] = useState('')
   const [diarySearchMonth, setDiarySearchMonth] = useState('')
   const [diarySearchDay, setDiarySearchDay] = useState('')
@@ -152,6 +164,47 @@ function App() {
     setTaskInput('')
   }
 
+  const filesToDataUrls = async (files: FileList | null) => {
+    if (!files) return [] as string[]
+    const arr = Array.from(files)
+    const urls = await Promise.all(
+      arr.map(
+        (f) =>
+          new Promise<string>((resolve, reject) => {
+            const reader = new FileReader()
+            reader.onload = () => resolve(String(reader.result || ''))
+            reader.onerror = () => reject(reader.error)
+            reader.readAsDataURL(f)
+          }),
+      ),
+    )
+    return urls.filter(Boolean)
+  }
+
+  const onPickImages = async (files: FileList | null) => {
+    const urls = await filesToDataUrls(files)
+    if (urls.length) setDiaryImages((prev) => [...prev, ...urls])
+  }
+
+  const onPickVideos = async (files: FileList | null) => {
+    const urls = await filesToDataUrls(files)
+    if (urls.length) setDiaryVideos((prev) => [...prev, ...urls])
+  }
+
+  const onPickLocation = () => {
+    if (!navigator.geolocation) {
+      alert('当前浏览器不支持定位')
+      return
+    }
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        setDiaryLocation(`纬度 ${pos.coords.latitude.toFixed(5)}, 经度 ${pos.coords.longitude.toFixed(5)}`)
+      },
+      () => alert('定位失败，请检查权限'),
+      { enableHighAccuracy: true, timeout: 8000 },
+    )
+  }
+
   const addDiary = () => {
     if (!diaryContent.trim()) return
     const targetDate = weekDates[diaryDay - 1]
@@ -162,10 +215,17 @@ function App() {
       title: diaryTitle.trim() || autoTitle,
       content: diaryContent.trim(),
       createdAt: Date.now(),
+      images: diaryImages,
+      videos: diaryVideos,
+      location: diaryLocation,
     }
     setDiariesByDate((prev) => ({ ...prev, [key]: [entry, ...(prev[key] || [])] }))
     setDiaryTitle('')
     setDiaryContent('')
+    setDiaryImages([])
+    setDiaryVideos([])
+    setDiaryLocation('')
+    setDiaryExpanded(false)
   }
 
   const markTask = (weekId: string, dayNum: number, taskId: string, mode: 'done' | 'failed') => {
@@ -618,31 +678,66 @@ function App() {
             <button className="search-toggle-btn" onClick={() => setDiarySearchOpen((v) => !v)}>🔍</button>
           </div>
 
-          <div className="compose-card">
+          <div className="compose-card" onClick={() => setDiaryExpanded(true)}>
             <div className="compose-top">
               <div className="avatar-dot">🍩</div>
-              <select value={diaryDay} onChange={(e) => setDiaryDay(Number(e.target.value))}>
-                {weekDates.map((d, i) => (
-                  <option key={i + 1} value={i + 1}>保存到 {d.getMonth() + 1}月{d.getDate()}日（晚上）</option>
-                ))}
-              </select>
+              <div className="compose-title">写点什么吧</div>
             </div>
-            <input value={diaryTitle} onChange={(e) => setDiaryTitle(e.target.value)} placeholder="标题（可选）" />
-            <textarea value={diaryContent} onChange={(e) => setDiaryContent(e.target.value)} rows={8} placeholder="写点什么吧" />
-            <div className="compose-actions">
-              <span className="muted">🔒 私密</span>
-              <div className="row">
-                <button
-                  onClick={() => {
-                    setDiaryTitle('')
-                    setDiaryContent('')
-                  }}
-                >
-                  清空
-                </button>
-                <button onClick={addDiary}>发送</button>
-              </div>
-            </div>
+
+            {diaryExpanded && (
+              <>
+                <select value={diaryDay} onChange={(e) => setDiaryDay(Number(e.target.value))}>
+                  {weekDates.map((d, i) => (
+                    <option key={i + 1} value={i + 1}>保存到 {d.getMonth() + 1}月{d.getDate()}日（晚上）</option>
+                  ))}
+                </select>
+                <input value={diaryTitle} onChange={(e) => setDiaryTitle(e.target.value)} placeholder="标题（可选）" />
+                <textarea
+                  value={diaryContent}
+                  onChange={(e) => setDiaryContent(e.target.value)}
+                  rows={8}
+                  placeholder="写点什么吧"
+                />
+
+                {(diaryImages.length > 0 || diaryVideos.length > 0 || diaryLocation) && (
+                  <div className="compose-preview">
+                    {diaryLocation && <small>📍 {diaryLocation}</small>}
+                    {diaryImages.length > 0 && <small>🖼️ 已选图片 {diaryImages.length} 张</small>}
+                    {diaryVideos.length > 0 && <small>🎬 已选视频 {diaryVideos.length} 个</small>}
+                  </div>
+                )}
+
+                <div className="compose-toolbar">
+                  <label className="tool-btn">📷
+                    <input type="file" accept="image/*" multiple hidden onChange={(e) => onPickImages(e.target.files)} />
+                  </label>
+                  <label className="tool-btn">🎞️
+                    <input type="file" accept="video/*" multiple hidden onChange={(e) => onPickVideos(e.target.files)} />
+                  </label>
+                  <button className="tool-btn" onClick={(e) => { e.stopPropagation(); onPickLocation() }}>📍</button>
+                </div>
+
+                <div className="compose-actions">
+                  <span className="muted">🔒 私密</span>
+                  <div className="row">
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        setDiaryTitle('')
+                        setDiaryContent('')
+                        setDiaryImages([])
+                        setDiaryVideos([])
+                        setDiaryLocation('')
+                        setDiaryExpanded(false)
+                      }}
+                    >
+                      取消
+                    </button>
+                    <button onClick={(e) => { e.stopPropagation(); addDiary() }}>发送</button>
+                  </div>
+                </div>
+              </>
+            )}
           </div>
 
           <div className="diary-search">
@@ -684,7 +779,22 @@ function App() {
                   <small>
                     {item.dateLabel} · {new Date(item.entry.createdAt).toLocaleString()}
                   </small>
+                  {item.entry.location && <div className="muted">📍 {item.entry.location}</div>}
                   <p>{item.entry.content}</p>
+                  {!!item.entry.images?.length && (
+                    <div className="media-grid">
+                      {item.entry.images.map((src, idx) => (
+                        <img key={idx} src={src} alt="diary" />
+                      ))}
+                    </div>
+                  )}
+                  {!!item.entry.videos?.length && (
+                    <div className="media-grid">
+                      {item.entry.videos.map((src, idx) => (
+                        <video key={idx} src={src} controls />
+                      ))}
+                    </div>
+                  )}
                 </div>
               ))
             )}
