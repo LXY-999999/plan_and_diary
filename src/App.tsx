@@ -11,6 +11,7 @@ type WeekGoal = { id: string; title: string; days: DayPlan[] }
 type Theme = 'genki' | 'mint'
 type GoalType = '年目标' | '月目标'
 type Page = 'plan' | 'diary'
+type TodoView = 'week' | 'month'
 type DiariesByDate = Record<string, DiaryEntry[]>
 
 type PersistedState = {
@@ -48,6 +49,7 @@ function App() {
   const [loadingAI, setLoadingAI] = useState(false)
 
   const [page, setPage] = useState<Page>('plan')
+  const [todoView, setTodoView] = useState<TodoView>('week')
   const [diariesByDate, setDiariesByDate] = useState<DiariesByDate>({})
   const [diaryDay, setDiaryDay] = useState(1)
   const [diaryTitle, setDiaryTitle] = useState('')
@@ -64,6 +66,22 @@ function App() {
       d.setDate(start.getDate() + i)
       return d
     })
+  }, [])
+
+  const monthMatrix = useMemo(() => {
+    const now = new Date()
+    const y = now.getFullYear()
+    const m = now.getMonth()
+    const firstDay = new Date(y, m, 1)
+    const lastDay = new Date(y, m + 1, 0)
+    const leading = firstDay.getDay()
+    const total = lastDay.getDate()
+
+    const cells: Array<Date | null> = []
+    for (let i = 0; i < leading; i++) cells.push(null)
+    for (let d = 1; d <= total; d++) cells.push(new Date(y, m, d))
+    while (cells.length % 7 !== 0) cells.push(null)
+    return cells
   }, [])
 
   useEffect(() => {
@@ -307,6 +325,14 @@ function App() {
     setOpenedDiary(null)
   }
 
+  const weekDayNumberByDateKey = useMemo(() => {
+    const map: Record<string, number> = {}
+    weekDates.forEach((d, idx) => {
+      map[dateKey(d)] = idx + 1
+    })
+    return map
+  }, [weekDates])
+
   const flow = useMemo(() => {
     const nodes: Node[] = [{ id: 'root', data: { label: `${goalType}: ${rootGoal || '未设置'}` }, position: { x: 260, y: 20 } }]
     const edges: Edge[] = []
@@ -403,7 +429,13 @@ function App() {
           </section>
 
           <section className="panel page-bottom-pad">
-            <h2>一周 To-Do（可打勾/打叉）</h2>
+            <div className="todo-head">
+              <h2>{todoView === 'week' ? '一周 To-Do（可打勾/打叉）' : '一月视图（与周视图数据联动）'}</h2>
+              <div className="view-toggle">
+                <button className={todoView === 'week' ? 'active' : ''} onClick={() => setTodoView('week')}>周视图</button>
+                <button className={todoView === 'month' ? 'active' : ''} onClick={() => setTodoView('month')}>月视图</button>
+              </div>
+            </div>
             {!selectedWeek ? (
               <p>请先选择一个周目标</p>
             ) : (
@@ -418,79 +450,126 @@ function App() {
                     </div>
                   </div>
                 )}
-                <div className="week-grid">
-                {selectedWeek.days.map((d) => {
-                  const actual = weekDates[d.day - 1]
-                  const key = dateKey(actual)
-                  const dayDiaries = diariesByDate[key] || []
-                  return (
-                    <div key={d.day} className="day-card">
-                      <h3>{actual.getMonth() + 1}月{actual.getDate()}日</h3>
-                      {(['上午', '下午', '晚上'] as Slot[]).map((s) => (
-                        <div key={s}>
-                          <h4>{s}</h4>
-                          {d.tasks.filter((t) => t.slot === s).map((t) => (
-                            <div className={`task ${t.done ? 'done' : ''} ${t.failed ? 'failed' : ''}`} key={t.id}>
-                              <span>{t.text}</span>
-                              <div className="task-status">
-                                {bulkModeWeekId === selectedWeek.id ? (
-                                  <button
-                                    className="status-box-btn"
-                                    onClick={() => toggleBulkTask(d.day, t.id)}
-                                  >
-                                    {bulkSelected[`${d.day}-${t.id}`] ? '☑️' : '☐'}
-                                  </button>
-                                ) : (
-                                  <>
-                                    <button className="status-box-btn" onClick={() => toggleTaskSelecting(selectedWeek.id, d.day, t.id)}>
-                                      {t.done ? '✅' : t.failed ? '❌' : '□'}
-                                    </button>
-                                    {t.selecting && (
-                                      <div className="status-pop">
-                                        <button className="status-choice" onClick={() => markTask(selectedWeek.id, d.day, t.id, 'done')}>
-                                          ✅
+
+                {todoView === 'week' ? (
+                  <div className="week-grid">
+                    {selectedWeek.days.map((d) => {
+                      const actual = weekDates[d.day - 1]
+                      const key = dateKey(actual)
+                      const dayDiaries = diariesByDate[key] || []
+                      return (
+                        <div key={d.day} className="day-card">
+                          <h3>{actual.getMonth() + 1}月{actual.getDate()}日</h3>
+                          {(['上午', '下午', '晚上'] as Slot[]).map((s) => (
+                            <div key={s}>
+                              <h4>{s}</h4>
+                              {d.tasks.filter((t) => t.slot === s).map((t) => (
+                                <div className={`task ${t.done ? 'done' : ''} ${t.failed ? 'failed' : ''}`} key={t.id}>
+                                  <span>{t.text}</span>
+                                  <div className="task-status">
+                                    {bulkModeWeekId === selectedWeek.id ? (
+                                      <button className="status-box-btn" onClick={() => toggleBulkTask(d.day, t.id)}>
+                                        {bulkSelected[`${d.day}-${t.id}`] ? '☑️' : '☐'}
+                                      </button>
+                                    ) : (
+                                      <>
+                                        <button className="status-box-btn" onClick={() => toggleTaskSelecting(selectedWeek.id, d.day, t.id)}>
+                                          {t.done ? '✅' : t.failed ? '❌' : '□'}
                                         </button>
-                                        <button className="status-choice" onClick={() => markTask(selectedWeek.id, d.day, t.id, 'failed')}>
-                                          ❌
-                                        </button>
-                                        <button className="status-choice text" onClick={() => startBulkSelect(selectedWeek.id, d.day, t.id)}>
-                                          多选
-                                        </button>
-                                      </div>
+                                        {t.selecting && (
+                                          <div className="status-pop">
+                                            <button className="status-choice" onClick={() => markTask(selectedWeek.id, d.day, t.id, 'done')}>
+                                              ✅
+                                            </button>
+                                            <button className="status-choice" onClick={() => markTask(selectedWeek.id, d.day, t.id, 'failed')}>
+                                              ❌
+                                            </button>
+                                            <button className="status-choice text" onClick={() => startBulkSelect(selectedWeek.id, d.day, t.id)}>
+                                              多选
+                                            </button>
+                                          </div>
+                                        )}
+                                      </>
                                     )}
-                                  </>
-                                )}
-                              </div>
+                                  </div>
+                                </div>
+                              ))}
                             </div>
                           ))}
-                        </div>
-                      ))}
 
-                      <div>
-                        <h4>日记</h4>
-                        <div className="diary-links">
-                          {dayDiaries.length === 0 ? (
-                            <small>暂无日记</small>
-                          ) : (
-                            dayDiaries.map((entry) => (
+                          <div>
+                            <h4>日记</h4>
+                            <div className="diary-links">
+                              {dayDiaries.length === 0 ? (
+                                <small>暂无日记</small>
+                              ) : (
+                                dayDiaries.map((entry) => (
+                                  <button
+                                    className="diary-link-btn"
+                                    key={entry.id}
+                                    onClick={() => {
+                                      setOpenedDiary({ dateLabel: `${actual.getMonth() + 1}月${actual.getDate()}日`, entry })
+                                      setPage('diary')
+                                    }}
+                                  >
+                                    {entry.title}
+                                  </button>
+                                ))
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                      )
+                    })}
+                  </div>
+                ) : (
+                  <div className="month-grid">
+                    {['日', '一', '二', '三', '四', '五', '六'].map((w) => (
+                      <div key={w} className="month-weekday">周{w}</div>
+                    ))}
+                    {monthMatrix.map((dt, idx) => {
+                      if (!dt) return <div key={`empty-${idx}`} className="month-cell empty" />
+                      const key = dateKey(dt)
+                      const dayNo = weekDayNumberByDateKey[key]
+                      const dayPlan = dayNo ? selectedWeek.days.find((x) => x.day === dayNo) : undefined
+                      const dayDiaries = diariesByDate[key] || []
+
+                      return (
+                        <div key={key} className="month-cell">
+                          <h4>{dt.getMonth() + 1}月{dt.getDate()}日</h4>
+                          {(['上午', '下午', '晚上'] as Slot[]).map((s) => (
+                            <div key={s} className="mini-block">
+                              <small>{s}</small>
+                              {(dayPlan?.tasks || [])
+                                .filter((t) => t.slot === s)
+                                .slice(0, 2)
+                                .map((t) => (
+                                  <div key={t.id} className={`mini-task ${t.done ? 'done' : ''} ${t.failed ? 'failed' : ''}`}>
+                                    <span>{t.done ? '✅' : t.failed ? '❌' : '□'}</span> {t.text}
+                                  </div>
+                                ))}
+                            </div>
+                          ))}
+                          <div className="mini-block">
+                            <small>日记</small>
+                            {dayDiaries.slice(0, 2).map((entry) => (
                               <button
                                 className="diary-link-btn"
                                 key={entry.id}
                                 onClick={() => {
-                                  setOpenedDiary({ dateLabel: `${actual.getMonth() + 1}月${actual.getDate()}日`, entry })
+                                  setOpenedDiary({ dateLabel: `${dt.getMonth() + 1}月${dt.getDate()}日`, entry })
                                   setPage('diary')
                                 }}
                               >
                                 {entry.title}
                               </button>
-                            ))
-                          )}
+                            ))}
+                          </div>
                         </div>
-                      </div>
-                    </div>
-                  )
-                })}
-              </div>
+                      )
+                    })}
+                  </div>
+                )}
               </>
             )}
           </section>

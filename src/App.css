@@ -22,6 +22,7 @@ button:hover { opacity:.9; }
   .app { padding: 12px; }
   .panel { padding: 12px; border-radius: 14px; }
   .week-grid { grid-template-columns: repeat(2, minmax(150px,1fr)); }
+  .month-grid { grid-template-columns: repeat(4, minmax(120px,1fr)); }
 }
 @media (max-width: 640px) {
   .row { flex-direction: column; align-items: stretch; }
@@ -29,6 +30,7 @@ button:hover { opacity:.9; }
   .theme-switch { width: 100%; display:flex; gap:8px; }
   .theme-switch button { margin-left: 0; flex:1; }
   .week-grid { grid-template-columns: 1fr; }
+  .month-grid { grid-template-columns: repeat(2, minmax(120px,1fr)); }
   .flow-wrap .flow { height: 300px; }
   .bottom-nav { padding-left: 8px; padding-right: 8px; }
 }
@@ -69,6 +71,17 @@ button:hover { opacity:.9; }
 }
 .bottom-nav button { font-weight: 600; }
 .bottom-nav button.active { box-shadow: 0 0 0 2px rgba(0,0,0,.08) inset; }
+.todo-head { display:flex; justify-content:space-between; align-items:center; gap:8px; flex-wrap:wrap; }
+.view-toggle { display:flex; gap:6px; }
+.view-toggle button.active { box-shadow: 0 0 0 2px rgba(0,0,0,.08) inset; }
+.month-grid { display:grid; grid-template-columns: repeat(7, minmax(120px,1fr)); gap:8px; }
+.month-weekday { text-align:center; color:#666; font-size:12px; }
+.month-cell { background:#fafafa; border:1px solid #eee; border-radius:10px; padding:8px; min-height:150px; }
+.month-cell.empty { background:transparent; border:none; }
+.mini-block { margin-bottom:6px; }
+.mini-task { font-size:12px; background:#fff; border:1px solid #eee; border-radius:6px; padding:2px 4px; margin-top:3px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.mini-task.done { border-color:#57c96f; background:#f1fff4; }
+.mini-task.failed { border-color:#f28b82; background:#fff3f2; }
 
 .app.genki { --accent:#ff5a8a; }
 .app.genki h1 { color: var(--accent); }
