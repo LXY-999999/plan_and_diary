@@ -4,7 +4,7 @@ import ReactFlow, { Background, Controls, MiniMap, type Edge, type Node } from '
 import 'reactflow/dist/style.css'
 
 type Slot = '上午' | '下午' | '晚上'
-type DayTask = { id: string; text: string; slot: Slot; done?: boolean; failed?: boolean }
+type DayTask = { id: string; text: string; slot: Slot; done?: boolean; failed?: boolean; selecting?: boolean }
 type DiaryEntry = { id: string; title: string; content: string; createdAt: number }
 type DayPlan = { day: number; tasks: DayTask[] }
 type WeekGoal = { id: string; title: string; days: DayPlan[] }
@@ -142,8 +142,27 @@ function App() {
               : {
                   ...d,
                   tasks: d.tasks.map((t) =>
-                    t.id !== taskId ? t : { ...t, done: mode === 'done', failed: mode === 'failed' },
+                    t.id !== taskId ? t : { ...t, done: mode === 'done', failed: mode === 'failed', selecting: false },
                   ),
+                },
+          ),
+        }
+      }),
+    )
+  }
+
+  const toggleTaskSelecting = (weekId: string, dayNum: number, taskId: string) => {
+    setWeekGoals((prev) =>
+      prev.map((w) => {
+        if (w.id !== weekId) return w
+        return {
+          ...w,
+          days: w.days.map((d) =>
+            d.day !== dayNum
+              ? d
+              : {
+                  ...d,
+                  tasks: d.tasks.map((t) => (t.id !== taskId ? t : { ...t, selecting: !t.selecting })),
                 },
           ),
         }
@@ -342,19 +361,32 @@ function App() {
                             <div className={`task ${t.done ? 'done' : ''} ${t.failed ? 'failed' : ''}`} key={t.id}>
                               <span>{t.text}</span>
                               <div className="task-status">
-                                <span className="status-box">{t.done ? '✓' : t.failed ? '✕' : '□'}</span>
-                                <button
-                                  className={`status-btn ${t.done ? 'active' : ''}`}
-                                  onClick={() => markTask(selectedWeek.id, d.day, t.id, 'done')}
-                                >
-                                  ✓
-                                </button>
-                                <button
-                                  className={`status-btn ${t.failed ? 'active' : ''}`}
-                                  onClick={() => markTask(selectedWeek.id, d.day, t.id, 'failed')}
-                                >
-                                  ✕
-                                </button>
+                                {t.done ? (
+                                  <span className="chosen-status">✅</span>
+                                ) : t.failed ? (
+                                  <span className="chosen-status">❌</span>
+                                ) : t.selecting ? (
+                                  <select
+                                    className="status-select"
+                                    defaultValue=""
+                                    onChange={(e) => {
+                                      const v = e.target.value
+                                      if (v === 'done') markTask(selectedWeek.id, d.day, t.id, 'done')
+                                      if (v === 'failed') markTask(selectedWeek.id, d.day, t.id, 'failed')
+                                    }}
+                                    onBlur={() => toggleTaskSelecting(selectedWeek.id, d.day, t.id)}
+                                  >
+                                    <option value="" disabled>
+                                      请选择
+                                    </option>
+                                    <option value="done">✅</option>
+                                    <option value="failed">❌</option>
+                                  </select>
+                                ) : (
+                                  <button className="status-box-btn" onClick={() => toggleTaskSelecting(selectedWeek.id, d.day, t.id)}>
+                                    □
+                                  </button>
+                                )}
                               </div>
                             </div>
                           ))}
