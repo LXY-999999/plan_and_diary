@@ -54,7 +54,10 @@ function App() {
   const [diaryDay, setDiaryDay] = useState(1)
   const [diaryTitle, setDiaryTitle] = useState('')
   const [diaryContent, setDiaryContent] = useState('')
-  const [openedDiary, setOpenedDiary] = useState<{ dateLabel: string; entry: DiaryEntry } | null>(null)
+  const [diarySearchYear, setDiarySearchYear] = useState('')
+  const [diarySearchMonth, setDiarySearchMonth] = useState('')
+  const [diarySearchDay, setDiarySearchDay] = useState('')
+  const [appliedDiarySearch, setAppliedDiarySearch] = useState({ year: '', month: '', day: '' })
   const [bulkModeWeekId, setBulkModeWeekId] = useState<string | null>(null)
   const [bulkSelected, setBulkSelected] = useState<Record<string, boolean>>({})
 
@@ -120,6 +123,10 @@ function App() {
     setBulkSelected({})
   }, [selectedWeekId])
 
+  useEffect(() => {
+    setAppliedDiarySearch({ year: diarySearchYear, month: diarySearchMonth, day: diarySearchDay })
+  }, [diarySearchYear, diarySearchMonth, diarySearchDay])
+
   const addWeek = () => {
     if (!weekTitle.trim()) return
     const w: WeekGoal = { id: uuid(), title: weekTitle.trim(), days: emptyDays() }
@@ -152,7 +159,6 @@ function App() {
     setDiariesByDate((prev) => ({ ...prev, [key]: [entry, ...(prev[key] || [])] }))
     setDiaryTitle('')
     setDiaryContent('')
-    setOpenedDiary({ dateLabel: `${targetDate.getMonth() + 1}月${targetDate.getDate()}日`, entry })
   }
 
   const markTask = (weekId: string, dayNum: number, taskId: string, mode: 'done' | 'failed') => {
@@ -322,7 +328,6 @@ function App() {
     setDiaryDay(1)
     setDiaryTitle('')
     setDiaryContent('')
-    setOpenedDiary(null)
   }
 
   const weekDayNumberByDateKey = useMemo(() => {
@@ -332,6 +337,33 @@ function App() {
     })
     return map
   }, [weekDates])
+
+  const diaryHistory = useMemo(() => {
+    const all: Array<{ date: Date; dateLabel: string; key: string; entry: DiaryEntry }> = []
+    Object.entries(diariesByDate).forEach(([key, entries]) => {
+      const [y, m, d] = key.split('-').map(Number)
+      const dt = new Date(y, (m || 1) - 1, d || 1)
+      entries.forEach((entry) => {
+        all.push({ date: dt, dateLabel: `${m}月${d}日`, key, entry })
+      })
+    })
+
+    const y = appliedDiarySearch.year.trim()
+    const m = appliedDiarySearch.month.trim()
+    const d = appliedDiarySearch.day.trim()
+
+    const filtered = all.filter((item) => {
+      const year = String(item.date.getFullYear())
+      const month = String(item.date.getMonth() + 1)
+      const day = String(item.date.getDate())
+      if (y && year !== y) return false
+      if (m && month !== String(Number(m))) return false
+      if (d && day !== String(Number(d))) return false
+      return true
+    })
+
+    return filtered.sort((a, b) => b.entry.createdAt - a.entry.createdAt)
+  }, [diariesByDate, appliedDiarySearch])
 
   const flow = useMemo(() => {
     const nodes: Node[] = [{ id: 'root', data: { label: `${goalType}: ${rootGoal || '未设置'}` }, position: { x: 260, y: 20 } }]
@@ -508,7 +540,6 @@ function App() {
                                     className="diary-link-btn"
                                     key={entry.id}
                                     onClick={() => {
-                                      setOpenedDiary({ dateLabel: `${actual.getMonth() + 1}月${actual.getDate()}日`, entry })
                                       setPage('diary')
                                     }}
                                   >
@@ -557,7 +588,6 @@ function App() {
                                 className="diary-link-btn"
                                 key={entry.id}
                                 onClick={() => {
-                                  setOpenedDiary({ dateLabel: `${dt.getMonth() + 1}月${dt.getDate()}日`, entry })
                                   setPage('diary')
                                 }}
                               >
@@ -592,22 +622,48 @@ function App() {
               onClick={() => {
                 setDiaryTitle('')
                 setDiaryContent('')
-                setOpenedDiary(null)
               }}
             >
               清空编辑
             </button>
           </div>
 
-          {openedDiary && (
-            <div className="diary-detail">
-              <h3>{openedDiary.entry.title}</h3>
-              <small>
-                {openedDiary.dateLabel} · {new Date(openedDiary.entry.createdAt).toLocaleString()}
-              </small>
-              <p>{openedDiary.entry.content}</p>
+          <div className="diary-search">
+            <h3>历史日记</h3>
+            <div className="row">
+              <input value={diarySearchYear} onChange={(e) => setDiarySearchYear(e.target.value)} placeholder="年，如 2026" />
+              <input value={diarySearchMonth} onChange={(e) => setDiarySearchMonth(e.target.value)} placeholder="月，如 3" />
+              <input value={diarySearchDay} onChange={(e) => setDiarySearchDay(e.target.value)} placeholder="日，如 4" />
+              <button onClick={() => setAppliedDiarySearch({ year: diarySearchYear, month: diarySearchMonth, day: diarySearchDay })}>搜索</button>
+              <button
+                onClick={() => {
+                  setDiarySearchYear('')
+                  setDiarySearchMonth('')
+                  setDiarySearchDay('')
+                  setAppliedDiarySearch({ year: '', month: '', day: '' })
+                }}
+              >
+                清空
+              </button>
             </div>
-          )}
+          </div>
+
+          <div className="diary-history-list">
+            {diaryHistory.length === 0 ? (
+              <p className="muted">没有匹配到记录</p>
+            ) : (
+              diaryHistory.map((item) => (
+                <div className="diary-detail" key={`${item.key}-${item.entry.id}`}>
+                  <h3>{item.entry.title}</h3>
+                  <small>
+                    {item.dateLabel} · {new Date(item.entry.createdAt).toLocaleString()}
+                  </small>
+                  <p>{item.entry.content}</p>
+                </div>
+              ))
+            )}
+          </div>
+
         </section>
       )}
 

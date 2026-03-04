@@ -82,6 +82,8 @@ button:hover { opacity:.9; }
 .mini-task { font-size:12px; background:#fff; border:1px solid #eee; border-radius:6px; padding:2px 4px; margin-top:3px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
 .mini-task.done { border-color:#57c96f; background:#f1fff4; }
 .mini-task.failed { border-color:#f28b82; background:#fff3f2; }
+.diary-search { margin-top: 12px; }
+.diary-history-list { margin-top: 8px; }
 
 .app.genki { --accent:#ff5a8a; }
 .app.genki h1 { color: var(--accent); }
