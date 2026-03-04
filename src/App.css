@@ -21,10 +21,10 @@ button:hover { opacity:.9; }
 .task { display:flex; justify-content:space-between; gap:8px; align-items:center; background:#fff; border:1px solid #eee; border-radius:8px; padding:6px; margin-bottom:6px; }
 .task.done { border-color:#57c96f; background:#f1fff4; }
 .task.failed { border-color:#f28b82; background:#fff3f2; }
-.task-status { display:flex; align-items:center; gap:4px; }
-.status-box-btn { width:28px; height:28px; border-radius:6px; background:#fff !important; color:#666 !important; border:1px solid #ddd !important; padding:0 !important; }
-.status-select { width:72px; height:28px; padding:0 6px; border-radius:6px; border:1px solid #ddd; background:#fff; }
-.chosen-status { font-size:18px; line-height:1; }
+.task-status { display:flex; align-items:center; gap:4px; position:relative; }
+.status-box-btn { width:30px; height:30px; border-radius:6px; background:#fff !important; color:#666 !important; border:1px solid #ddd !important; padding:0 !important; font-size:16px; }
+.status-pop { position:absolute; top:34px; right:0; display:flex; gap:4px; padding:4px; border:1px solid #ddd; border-radius:8px; background:#fff; box-shadow:0 6px 16px rgba(0,0,0,.08); z-index:5; }
+.status-choice { min-width:30px; height:30px; border-radius:6px; background:#f7f7f7 !important; color:#222 !important; border:1px solid #ddd !important; padding:0 !important; font-size:16px; }
 .theme-switch button { margin-left: 8px; }
 .diary-page textarea { width: 100%; margin: 10px 0; }
 .muted { color:#666; font-size:13px; }

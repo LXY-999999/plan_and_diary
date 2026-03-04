@@ -361,31 +361,18 @@ function App() {
                             <div className={`task ${t.done ? 'done' : ''} ${t.failed ? 'failed' : ''}`} key={t.id}>
                               <span>{t.text}</span>
                               <div className="task-status">
-                                {t.done ? (
-                                  <span className="chosen-status">✅</span>
-                                ) : t.failed ? (
-                                  <span className="chosen-status">❌</span>
-                                ) : t.selecting ? (
-                                  <select
-                                    className="status-select"
-                                    defaultValue=""
-                                    onChange={(e) => {
-                                      const v = e.target.value
-                                      if (v === 'done') markTask(selectedWeek.id, d.day, t.id, 'done')
-                                      if (v === 'failed') markTask(selectedWeek.id, d.day, t.id, 'failed')
-                                    }}
-                                    onBlur={() => toggleTaskSelecting(selectedWeek.id, d.day, t.id)}
-                                  >
-                                    <option value="" disabled>
-                                      请选择
-                                    </option>
-                                    <option value="done">✅</option>
-                                    <option value="failed">❌</option>
-                                  </select>
-                                ) : (
-                                  <button className="status-box-btn" onClick={() => toggleTaskSelecting(selectedWeek.id, d.day, t.id)}>
-                                    □
-                                  </button>
+                                <button className="status-box-btn" onClick={() => toggleTaskSelecting(selectedWeek.id, d.day, t.id)}>
+                                  {t.done ? '✅' : t.failed ? '❌' : '□'}
+                                </button>
+                                {t.selecting && (
+                                  <div className="status-pop">
+                                    <button className="status-choice" onClick={() => markTask(selectedWeek.id, d.day, t.id, 'done')}>
+                                      ✅
+                                    </button>
+                                    <button className="status-choice" onClick={() => markTask(selectedWeek.id, d.day, t.id, 'failed')}>
+                                      ❌
+                                    </button>
+                                  </div>
                                 )}
                               </div>
                             </div>
