@@ -128,6 +128,7 @@ function App() {
   const [appliedDiarySearch, setAppliedDiarySearch] = useState({ year: '', month: '', day: '' })
   const [bulkModeWeekId, setBulkModeWeekId] = useState<string | null>(null)
   const [bulkSelected, setBulkSelected] = useState<Record<string, boolean>>({})
+  const [undoStack, setUndoStack] = useState<Array<{ weekGoals: WeekGoal[]; diariesByDate: DiariesByDate; quadrantItems: QuadrantItem[]; selectedWeekId: string }>>([])
   const [editingDiaryKey, setEditingDiaryKey] = useState<string | null>(null)
   const [editingDiaryId, setEditingDiaryId] = useState<string | null>(null)
   const [editingDiaryTitle, setEditingDiaryTitle] = useState('')
@@ -311,8 +312,33 @@ function App() {
     setAppliedDiarySearch({ year: diarySearchYear, month: diarySearchMonth, day: diarySearchDay })
   }, [diarySearchYear, diarySearchMonth, diarySearchDay])
 
+  const pushUndoSnapshot = () => {
+    setUndoStack((prev) => [
+      ...prev.slice(-29),
+      {
+        weekGoals: JSON.parse(JSON.stringify(weekGoals)),
+        diariesByDate: JSON.parse(JSON.stringify(diariesByDate)),
+        quadrantItems: JSON.parse(JSON.stringify(quadrantItems)),
+        selectedWeekId,
+      },
+    ])
+  }
+
+  const undoLastAction = () => {
+    setUndoStack((prev) => {
+      const last = prev[prev.length - 1]
+      if (!last) return prev
+      setWeekGoals(last.weekGoals)
+      setDiariesByDate(last.diariesByDate)
+      setQuadrantItems(last.quadrantItems)
+      setSelectedWeekId(last.selectedWeekId)
+      return prev.slice(0, -1)
+    })
+  }
+
   const addWeek = () => {
     if (!weekTitle.trim()) return
+    pushUndoSnapshot()
     const w: WeekGoal = { id: uuid(), title: weekTitle.trim(), days: emptyDays(), startDate: dateKey(normalizeDate(new Date())) }
     setWeekGoals((prev) => [...prev, w])
     setSelectedWeekId(w.id)
@@ -321,6 +347,7 @@ function App() {
 
   const addTask = () => {
     if (!selectedWeek || !taskInput.trim()) return
+    pushUndoSnapshot()
     setWeekGoals((prev) =>
       prev.map((w) => {
         if (w.id !== selectedWeek.id) return w
@@ -338,6 +365,7 @@ function App() {
   const addQuadrantItemInCell = (quadrant: QuadrantKey) => {
     const text = (quadrantQuickInput[quadrant] || '').trim()
     if (!text) return
+    pushUndoSnapshot()
     setQuadrantItems((prev) => [{ id: uuid(), text, quadrant, createdAt: Date.now() }, ...prev])
     setQuadrantQuickInput((prev) => ({ ...prev, [quadrant]: '' }))
   }
@@ -361,6 +389,7 @@ function App() {
       alert('请至少选择一个日期')
       return
     }
+    pushUndoSnapshot()
     setWeekGoals((prev) =>
       prev.map((w) => {
         if (w.id !== selectedWeek.id) return w
@@ -419,6 +448,7 @@ function App() {
   }
 
   const deleteDiary = (dateStorageKey: string, diaryId: string) => {
+    pushUndoSnapshot()
     setDiariesByDate((prev) => {
       const list = prev[dateStorageKey] || []
       const next = list.filter((x) => x.id !== diaryId)
@@ -438,6 +468,7 @@ function App() {
 
   const saveEditDiary = () => {
     if (!editingDiaryKey || !editingDiaryId) return
+    pushUndoSnapshot()
     setDiariesByDate((prev) => ({
       ...prev,
       [editingDiaryKey]: (prev[editingDiaryKey] || []).map((x) =>
@@ -459,6 +490,7 @@ function App() {
 
   const addDiary = () => {
     if (!diaryContent.trim()) return
+    pushUndoSnapshot()
     const targetDate = selectedWeekDates[diaryDay - 1]
     const key = dateKey(targetDate)
     const autoTitle = diaryContent.trim().slice(0, 14) + (diaryContent.trim().length > 14 ? '...' : '')
@@ -481,6 +513,7 @@ function App() {
   }
 
   const markTask = (weekId: string, dayNum: number, taskId: string, mode: 'done' | 'failed') => {
+    pushUndoSnapshot()
     setWeekGoals((prev) =>
       prev.map((w) => {
         if (w.id !== weekId) return w
@@ -519,6 +552,7 @@ function App() {
 
   const applyBulkStatus = (mode: 'done' | 'failed') => {
     if (!bulkModeWeekId) return
+    pushUndoSnapshot()
     setWeekGoals((prev) =>
       prev.map((w) => {
         if (w.id !== bulkModeWeekId) return w
@@ -531,6 +565,25 @@ function App() {
               if (!bulkSelected[key]) return t
               return { ...t, done: mode === 'done', failed: mode === 'failed', selecting: false }
             }),
+          })),
+        }
+      }),
+    )
+    setBulkSelected({})
+    setBulkModeWeekId(null)
+  }
+
+  const applyBulkDelete = () => {
+    if (!bulkModeWeekId) return
+    pushUndoSnapshot()
+    setWeekGoals((prev) =>
+      prev.map((w) => {
+        if (w.id !== bulkModeWeekId) return w
+        return {
+          ...w,
+          days: w.days.map((d) => ({
+            ...d,
+            tasks: d.tasks.filter((t) => !bulkSelected[`${d.day}-${t.id}`]),
           })),
         }
       }),
@@ -632,6 +685,7 @@ function App() {
 
   const clearAll = () => {
     if (!confirm('确认清空所有本地计划数据吗？')) return
+    pushUndoSnapshot()
     localStorage.removeItem(STORAGE_KEY)
     setTheme('genki')
     setUsername('default')
@@ -737,6 +791,7 @@ function App() {
         <h1>🌈 Plan & Diary</h1>
         <div className="theme-switch">
           <span style={{ marginRight: 8, fontSize: 12, opacity: 0.85 }}>{saveHint}</span>
+          <button onClick={undoLastAction} disabled={undoStack.length === 0}>↶ 撤回</button>
           <button onClick={() => setTheme('genki')}>元气</button>
           <button onClick={() => setTheme('mint')}>薄荷</button>
           <button onClick={clearAll}>清空数据</button>
@@ -893,6 +948,7 @@ function App() {
                     <div>
                       <button onClick={() => applyBulkStatus('done')}>批量✅</button>
                       <button onClick={() => applyBulkStatus('failed')}>批量❌</button>
+                      <button onClick={applyBulkDelete}>删除</button>
                       <button onClick={cancelBulk}>退出</button>
                     </div>
                   </div>
