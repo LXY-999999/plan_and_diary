@@ -137,6 +137,7 @@ function App() {
   const [bulkSelected, setBulkSelected] = useState<Record<string, boolean>>({})
   const [draggingWeekTask, setDraggingWeekTask] = useState<{ day: number; taskId: string } | null>(null)
   const [weekDropTarget, setWeekDropTarget] = useState<{ day: number; slot: Slot } | null>(null)
+  const [movingWeekTask, setMovingWeekTask] = useState<{ day: number; taskId: string } | null>(null)
   const [undoStack, setUndoStack] = useState<Array<{ weekGoals: WeekGoal[]; diariesByDate: DiariesByDate; quadrantItems: QuadrantItem[]; planTreeNodes: PlanTreeNode[]; selectedWeekId: string }>>([])
   const [editingDiaryKey, setEditingDiaryKey] = useState<string | null>(null)
   const [editingDiaryId, setEditingDiaryId] = useState<string | null>(null)
@@ -683,6 +684,12 @@ function App() {
         }
       }),
     )
+  }
+
+  const applyMoveToSlot = (targetDay: number, targetSlot: Slot) => {
+    if (!movingWeekTask) return
+    moveWeekTask(movingWeekTask.day, movingWeekTask.taskId, targetDay, targetSlot)
+    setMovingWeekTask(null)
   }
 
   const resolveTouchSlotTarget = (touch: any): { day: number; slot: Slot } | null => {
@@ -1279,11 +1286,14 @@ function App() {
                                   setWeekDropTarget(null)
                                 }
                               }}
+                              onClick={() => {
+                                if (movingWeekTask) applyMoveToSlot(d.day, s)
+                              }}
                             >
                               <h4>{s}</h4>
                               {d.tasks.filter((t) => t.slot === s).map((t) => (
                                 <div
-                                  className={`task ${t.done ? 'done' : ''} ${t.failed ? 'failed' : ''}`}
+                                  className={`task ${t.done ? 'done' : ''} ${t.failed ? 'failed' : ''} ${movingWeekTask?.day === d.day && movingWeekTask?.taskId === t.id ? 'moving' : ''}`}
                                   key={t.id}
                                   draggable={bulkModeWeekId !== selectedWeek.id}
                                   onDragStart={() => setDraggingWeekTask({ day: d.day, taskId: t.id })}
@@ -1291,7 +1301,13 @@ function App() {
                                     setDraggingWeekTask(null)
                                     setWeekDropTarget(null)
                                   }}
-                                  onTouchStart={() => setDraggingWeekTask({ day: d.day, taskId: t.id })}
+                                  onTouchStart={(e: any) => {
+                                    setDraggingWeekTask({ day: d.day, taskId: t.id })
+                                    const timer = window.setTimeout(() => {
+                                      setMovingWeekTask({ day: d.day, taskId: t.id })
+                                    }, 260)
+                                    ;(e.currentTarget as any).__pressTimer = timer
+                                  }}
                                   onTouchMove={(e: any) => {
                                     if (!draggingWeekTask) return
                                     const touch = e.touches?.[0]
@@ -1300,6 +1316,8 @@ function App() {
                                     setWeekDropTarget(target)
                                   }}
                                   onTouchEnd={(e: any) => {
+                                    const timer = (e.currentTarget as any).__pressTimer
+                                    if (timer) window.clearTimeout(timer)
                                     if (!draggingWeekTask) return
                                     const touch = e.changedTouches?.[0]
                                     const target = touch ? resolveTouchSlotTarget(touch) : weekDropTarget
