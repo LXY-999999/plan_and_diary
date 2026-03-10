@@ -1001,8 +1001,11 @@ function App() {
           <details className="top-actions-menu">
             <summary>⚙️</summary>
             <div className="top-actions-pop">
-              <button onClick={() => setTheme('genki')}>元气</button>
-              <button onClick={() => setTheme('mint')}>薄荷</button>
+              <label style={{ fontSize: 12, color: '#64748b' }}>样式</label>
+              <select value={theme} onChange={(e) => setTheme(e.target.value as Theme)}>
+                <option value="mint">薄荷</option>
+                <option value="genki">元气</option>
+              </select>
               <button onClick={page === 'plan' ? clearPlanData : clearDiaryData}>{page === 'plan' ? '清空计划' : '清空日记'}</button>
             </div>
           </details>
