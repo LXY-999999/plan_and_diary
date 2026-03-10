@@ -989,6 +989,17 @@ function App() {
     }
   }
 
+  const renameTreeNodeById = (nodeId: string) => {
+    if (!nodeId || nodeId === 'root') return
+    const current = planTreeNodes.find((n) => n.id === nodeId)
+    if (!current) return
+    const next = prompt('输入新的节点名称', current.label)?.trim()
+    if (!next) return
+    pushUndoSnapshot()
+    setPlanTreeNodes((prev) => prev.map((n) => (n.id === nodeId ? { ...n, label: next } : n)))
+    setQuadrantItems((prev) => prev.map((q) => (q.sourceNodeId === nodeId ? { ...q, text: next } : q)))
+  }
+
   const deleteTreeNode = (nodeId: string) => {
     if (!nodeId || nodeId === 'root') {
       alert('根节点不可删除')
@@ -1041,7 +1052,7 @@ function App() {
         id: node.id,
         data: {
           label: (
-            <div className="tree-node-card" onClick={() => setSelectedTreeNodeId(node.id)}>
+            <div className="tree-node-card" onClick={() => setSelectedTreeNodeId(node.id)} onDoubleClick={() => renameTreeNodeById(node.id)}>
               <div>{`${node.goalLayer}｜${node.label}`}</div>
               {node.id !== 'root' && (
                 <div style={{ display: 'flex', gap: 4, marginTop: 4 }}>
