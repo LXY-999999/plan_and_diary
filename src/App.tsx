@@ -685,6 +685,16 @@ function App() {
     )
   }
 
+  const resolveTouchSlotTarget = (touch: any): { day: number; slot: Slot } | null => {
+    const el = document.elementFromPoint(touch.clientX, touch.clientY) as HTMLElement | null
+    const slotEl = el?.closest?.('[data-week-slot]') as HTMLElement | null
+    if (!slotEl) return null
+    const day = Number(slotEl.dataset.day || '')
+    const slot = (slotEl.dataset.slot || '') as Slot
+    if (!day || !slot) return null
+    return { day, slot }
+  }
+
   const toggleTaskSelecting = (weekId: string, dayNum: number, taskId: string) => {
     setWeekGoals((prev) => {
       const current = prev
@@ -1251,6 +1261,9 @@ function App() {
                           {(['上午', '下午', '晚上'] as Slot[]).map((s) => (
                             <div
                               key={s}
+                              data-week-slot="1"
+                              data-day={d.day}
+                              data-slot={s}
                               className={weekDropTarget?.day === d.day && weekDropTarget?.slot === s ? 'week-slot-drop-target' : ''}
                               onDragOver={(e) => {
                                 e.preventDefault()
@@ -1260,13 +1273,6 @@ function App() {
                                 if (weekDropTarget?.day === d.day && weekDropTarget?.slot === s) setWeekDropTarget(null)
                               }}
                               onDrop={() => {
-                                if (draggingWeekTask) {
-                                  moveWeekTask(draggingWeekTask.day, draggingWeekTask.taskId, d.day, s)
-                                  setDraggingWeekTask(null)
-                                  setWeekDropTarget(null)
-                                }
-                              }}
-                              onTouchEnd={() => {
                                 if (draggingWeekTask) {
                                   moveWeekTask(draggingWeekTask.day, draggingWeekTask.taskId, d.day, s)
                                   setDraggingWeekTask(null)
@@ -1286,6 +1292,21 @@ function App() {
                                     setWeekDropTarget(null)
                                   }}
                                   onTouchStart={() => setDraggingWeekTask({ day: d.day, taskId: t.id })}
+                                  onTouchMove={(e: any) => {
+                                    if (!draggingWeekTask) return
+                                    const touch = e.touches?.[0]
+                                    if (!touch) return
+                                    const target = resolveTouchSlotTarget(touch)
+                                    setWeekDropTarget(target)
+                                  }}
+                                  onTouchEnd={(e: any) => {
+                                    if (!draggingWeekTask) return
+                                    const touch = e.changedTouches?.[0]
+                                    const target = touch ? resolveTouchSlotTarget(touch) : weekDropTarget
+                                    if (target) moveWeekTask(draggingWeekTask.day, draggingWeekTask.taskId, target.day, target.slot)
+                                    setDraggingWeekTask(null)
+                                    setWeekDropTarget(null)
+                                  }}
                                 >
                                   <span>{t.text}</span>
                                   <div className="task-status">
