@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import './App.css'
-import ReactFlow, { Background, Controls, MiniMap, type Edge, type Node } from 'reactflow'
+import ReactFlow, { Background, MiniMap, type Edge, type Node } from 'reactflow'
 import 'reactflow/dist/style.css'
 import * as XLSX from 'xlsx'
 
@@ -1011,7 +1011,7 @@ function App() {
           label: (
             <div className="tree-node-card" onDoubleClick={() => renameTreeNodeById(node.id)}>
               <div>{`${node.goalLayer}｜${node.label}`}</div>
-              <div style={{ display: 'flex', gap: 4, marginTop: 4, alignItems: 'center' }}>
+              <div style={{ display: 'flex', gap: 4, marginTop: 4, alignItems: 'center', flexWrap: 'nowrap' }}>
                 <button className="schedule-box-btn" onClick={() => addTreeChildToNode(node.id, 'left')}>L+</button>
                 <button className="schedule-box-btn" onClick={() => addTreeChildToNode(node.id, 'right')}>R+</button>
                 {node.id !== 'root' && (
@@ -1172,7 +1172,6 @@ function App() {
                   fitView
                 >
                   <Background />
-                  <Controls />
                   <MiniMap style={{ width: 90, height: 60 }} />
                 </ReactFlow>
               </div>
