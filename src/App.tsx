@@ -1073,7 +1073,7 @@ function App() {
       {page === 'plan' ? (
         <>
           <section className="panel">
-            <details>
+            <details open>
               <summary>3) 计划四象限（艾森豪威尔）</summary>
               <div className="matrix-wrap" style={{ marginTop: 8 }}>
                 <div className="matrix-y-axis">重要性 ↑</div>
@@ -1179,7 +1179,7 @@ function App() {
           </section>
 
           <section className="panel page-bottom-pad">
-            <details>
+            <details open>
               <summary>执行看板（周视图 / 月视图）</summary>
               <div className="todo-head" style={{ marginTop: 8 }}>
                 <h2>{todoView === 'week' ? '一周 To-Do（可打勾/打叉）' : '一月视图（与周视图数据联动）'}</h2>
