@@ -842,21 +842,25 @@ function App() {
       }
     })
 
-    const maxTasks = Math.max(1, ...dayBlocks.map((x) => x.tasks.length))
+    const maxTasks = Math.max(8, ...dayBlocks.map((x) => x.tasks.length))
     const aoa: any[][] = []
 
-    // 第1行：每天标题（跨两列）
-    const headerRow: string[] = []
-    dayBlocks.forEach((d) => {
-      headerRow.push(d.title, '')
-    })
-    aoa.push(headerRow)
+    const totalCols = dayBlocks.length * 2
+    const rangeText = `${dayBlocks[0]?.title || ''} - ${dayBlocks[dayBlocks.length - 1]?.title || ''}`
 
-    // 第2行：每一天的列名
+    // 模板化表头
+    aoa.push(['本周计划模板', ...Array(totalCols - 1).fill('')])
+    aoa.push([`周目标：${selectedWeek.title}`, ...Array(totalCols - 1).fill('')])
+    aoa.push([`周范围：${rangeText}`, ...Array(totalCols - 1).fill('')])
+
+    // 每天标题（跨两列）
+    const dayHeaderRow: string[] = []
+    dayBlocks.forEach((d) => dayHeaderRow.push(d.title, ''))
+    aoa.push(dayHeaderRow)
+
+    // 子表头
     const subHeaderRow: string[] = []
-    dayBlocks.forEach(() => {
-      subHeaderRow.push('To Do', '状态')
-    })
+    dayBlocks.forEach(() => subHeaderRow.push('To Do', '状态'))
     aoa.push(subHeaderRow)
 
     // 任务行：每个 todo 一行，右侧状态列 ✅/❌/空
@@ -870,19 +874,33 @@ function App() {
       aoa.push(row)
     }
 
+    // 复盘模板行
+    aoa.push([])
+    aoa.push(['本周复盘', ...Array(totalCols - 1).fill('')])
+    aoa.push(['做得好的事：', ...Array(totalCols - 1).fill('')])
+    aoa.push(['下周改进：', ...Array(totalCols - 1).fill('')])
+
     const ws = XLSX.utils.aoa_to_sheet(aoa)
 
-    // 合并第1行每天的两列标题
-    ws['!merges'] = dayBlocks.map((_, i) => ({
-      s: { r: 0, c: i * 2 },
-      e: { r: 0, c: i * 2 + 1 },
-    }))
+    // 合并单元格（模板感）
+    ws['!merges'] = [
+      { s: { r: 0, c: 0 }, e: { r: 0, c: totalCols - 1 } },
+      { s: { r: 1, c: 0 }, e: { r: 1, c: totalCols - 1 } },
+      { s: { r: 2, c: 0 }, e: { r: 2, c: totalCols - 1 } },
+      ...dayBlocks.map((_, i) => ({ s: { r: 3, c: i * 2 }, e: { r: 3, c: i * 2 + 1 } })),
+      { s: { r: maxTasks + 6, c: 0 }, e: { r: maxTasks + 6, c: totalCols - 1 } },
+      { s: { r: maxTasks + 7, c: 0 }, e: { r: maxTasks + 7, c: totalCols - 1 } },
+      { s: { r: maxTasks + 8, c: 0 }, e: { r: maxTasks + 8, c: totalCols - 1 } },
+    ]
 
-    // 设置列宽（每一天两列）
+    // 列宽（每一天两列）
     ws['!cols'] = dayBlocks.flatMap(() => [{ wch: 24 }, { wch: 8 }])
 
-    // 日记sheet：同样按“每天两列”导出（标题 / 内容）
+    // 日记sheet：模板化（每天两列：标题/内容）
     const diaryAoa: any[][] = []
+    diaryAoa.push(['本周日记模板', ...Array(totalCols - 1).fill('')])
+    diaryAoa.push([`周目标：${selectedWeek.title}`, ...Array(totalCols - 1).fill('')])
+
     const diaryHeaderRow: string[] = []
     dayBlocks.forEach((d) => diaryHeaderRow.push(d.title, ''))
     diaryAoa.push(diaryHeaderRow)
@@ -891,7 +909,7 @@ function App() {
     dayBlocks.forEach(() => diarySubHeaderRow.push('日记标题', '日记内容'))
     diaryAoa.push(diarySubHeaderRow)
 
-    const maxDiaryRows = Math.max(1, ...dayBlocks.map((x) => x.diaries.length))
+    const maxDiaryRows = Math.max(4, ...dayBlocks.map((x) => x.diaries.length))
     for (let i = 0; i < maxDiaryRows; i++) {
       const row: string[] = []
       dayBlocks.forEach((d) => {
@@ -903,7 +921,11 @@ function App() {
     }
 
     const diaryWs = XLSX.utils.aoa_to_sheet(diaryAoa)
-    diaryWs['!merges'] = dayBlocks.map((_, i) => ({ s: { r: 0, c: i * 2 }, e: { r: 0, c: i * 2 + 1 } }))
+    diaryWs['!merges'] = [
+      { s: { r: 0, c: 0 }, e: { r: 0, c: totalCols - 1 } },
+      { s: { r: 1, c: 0 }, e: { r: 1, c: totalCols - 1 } },
+      ...dayBlocks.map((_, i) => ({ s: { r: 2, c: i * 2 }, e: { r: 2, c: i * 2 + 1 } })),
+    ]
     diaryWs['!cols'] = dayBlocks.flatMap(() => [{ wch: 16 }, { wch: 36 }])
 
     const wb = XLSX.utils.book_new()
