@@ -822,7 +822,7 @@ function App() {
                           <div key={item.id} className="mini-task" style={{ display: 'block', whiteSpace: 'normal', marginTop: 6 }}>
                             <div style={{ display: 'flex', justifyContent: 'space-between', gap: 6, alignItems: 'center' }}>
                               <span>{item.text}</span>
-                              <button className="chip" onClick={() => openTaskSchedule(item.id)}>安排</button>
+                              <button className="schedule-box-btn" onClick={() => openTaskSchedule(item.id)}>▾</button>
                             </div>
 
                             {taskScheduleOpenId === item.id && (
