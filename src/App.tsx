@@ -823,8 +823,8 @@ function App() {
         <>
           <section className="panel">
             <h2>1) 周目标 ↔ 日目标（合并交互）</h2>
-            <div className="row">
-              <input value={username} onChange={(e) => setUsername(e.target.value)} placeholder="用户名（用于自动分文件夹归档）" />
+            <div className="row compact-controls">
+              <input className="span-2" value={username} onChange={(e) => setUsername(e.target.value)} placeholder="用户名（用于自动分文件夹归档）" />
               <input value={weekTitle} onChange={(e) => setWeekTitle(e.target.value)} placeholder="新增周目标" />
               <button onClick={addWeek}>添加周目标</button>
             </div>
@@ -837,7 +837,7 @@ function App() {
               ))}
             </div>
 
-            <div className="row" style={{ marginTop: 8 }}>
+            <div className="row compact-controls" style={{ marginTop: 8 }}>
               <select value={day} onChange={(e) => setDay(Number(e.target.value))}>
                 {selectedWeekDates.map((d, i) => (
                   <option key={i + 1} value={i + 1}>{d.getMonth() + 1}月{d.getDate()}日</option>
@@ -848,11 +848,11 @@ function App() {
                 <option>下午</option>
                 <option>晚上</option>
               </select>
-              <input value={taskInput} onChange={(e) => setTaskInput(e.target.value)} placeholder="手动添加任务（回车后点添加）" />
-              <button onClick={addTask}>添加到当日</button>
+              <input className="span-2" value={taskInput} onChange={(e) => setTaskInput(e.target.value)} placeholder="手动添加任务（回车后点添加）" />
+              <button className="span-2" onClick={addTask}>添加到当日</button>
             </div>
 
-            <div className="chips" style={{ marginTop: 6 }}>
+            <div className="chips quick-actions" style={{ marginTop: 6 }}>
               <button className="chip" onClick={() => setTaskInput('复盘昨天完成情况')}>+ 复盘</button>
               <button className="chip" onClick={() => setTaskInput('处理最重要的一件事')}>+ MIT</button>
               <button className="chip" onClick={() => setTaskInput('整理收件箱与待办')}>+ 清空待办</button>
