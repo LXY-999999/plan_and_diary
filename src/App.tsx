@@ -78,6 +78,8 @@ const buildWeekDates = (startDateKey: string) => {
 function App() {
   const [theme, setTheme] = useState<Theme>('genki')
   const [username, setUsername] = useState('default')
+  const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle')
+  const [lastSavedAt, setLastSavedAt] = useState<number | null>(null)
   const [goalType, setGoalType] = useState<GoalType>('月目标')
   const [rootGoal, setRootGoal] = useState('')
   const [weekGoals, setWeekGoals] = useState<WeekGoal[]>([])
@@ -179,6 +181,7 @@ function App() {
       username,
     }
 
+    setSaveStatus('saving')
     const timer = window.setTimeout(() => {
       try {
         localStorage.setItem(STORAGE_KEY, JSON.stringify(payload))
@@ -191,7 +194,10 @@ function App() {
         const nextUserFolder = pruneArchiveDays({ ...userFolder, [dayKey]: payload }, MAX_ARCHIVE_DAYS_PER_USER)
         archive[userKey] = nextUserFolder
         localStorage.setItem(USER_ARCHIVE_KEY, JSON.stringify(archive))
+        setSaveStatus('saved')
+        setLastSavedAt(Date.now())
       } catch (e) {
+        setSaveStatus('error')
         console.warn('自动保存失败，已忽略。', e)
       }
     }, 400)
@@ -202,6 +208,7 @@ function App() {
   useEffect(() => {
     const saveNow = () => {
       try {
+        setSaveStatus('saving')
         const payload: PersistedState = {
           theme,
           goalType,
@@ -221,7 +228,10 @@ function App() {
         const userFolder = archive[userKey] || {}
         archive[userKey] = pruneArchiveDays({ ...userFolder, [dayKey]: payload }, MAX_ARCHIVE_DAYS_PER_USER)
         localStorage.setItem(USER_ARCHIVE_KEY, JSON.stringify(archive))
+        setSaveStatus('saved')
+        setLastSavedAt(Date.now())
       } catch (e) {
+        setSaveStatus('error')
         console.warn('页面隐藏时保存失败，已忽略。', e)
       }
     }
@@ -579,6 +589,15 @@ function App() {
     return filtered.sort((a, b) => b.entry.createdAt - a.entry.createdAt)
   }, [diariesByDate, appliedDiarySearch])
 
+  const saveHint = useMemo(() => {
+    if (saveStatus === 'saving') return '💾 保存中...'
+    if (saveStatus === 'error') return '⚠️ 保存失败（本地存储异常）'
+    if (saveStatus === 'saved') {
+      return lastSavedAt ? `✅ 已保存 ${new Date(lastSavedAt).toLocaleTimeString()}` : '✅ 已保存'
+    }
+    return '📝 待保存'
+  }, [saveStatus, lastSavedAt])
+
   const flow = useMemo(() => {
     const nodes: Node[] = [{ id: 'root', data: { label: `${goalType}: ${rootGoal || '未设置'}` }, position: { x: 260, y: 20 } }]
     const edges: Edge[] = []
@@ -602,6 +621,7 @@ function App() {
       <header>
         <h1>🌈 Plan & Diary</h1>
         <div className="theme-switch">
+          <span style={{ marginRight: 8, fontSize: 12, opacity: 0.85 }}>{saveHint}</span>
           <button onClick={() => setTheme('genki')}>元气</button>
           <button onClick={() => setTheme('mint')}>薄荷</button>
           <button onClick={clearAll}>清空数据</button>
