@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import './App.css'
 import ReactFlow, { Background, Controls, MiniMap, type Edge, type Node } from 'reactflow'
 import 'reactflow/dist/style.css'
+import * as XLSX from 'xlsx'
 
 type Slot = '上午' | '下午' | '晚上'
 type DayTask = { id: string; text: string; slot: Slot; done?: boolean; failed?: boolean; selecting?: boolean }
@@ -824,6 +825,37 @@ function App() {
     setAppliedDiarySearch({ year: '', month: '', day: '' })
   }
 
+  const exportWeekToExcel = () => {
+    if (!selectedWeek) {
+      alert('请先选择一个周目标')
+      return
+    }
+
+    const rows: Array<Record<string, string | number>> = []
+    selectedWeek.days.forEach((d) => {
+      const date = selectedWeekDates[d.day - 1]
+      const key = dateKey(date)
+      const dayDiaries = diariesByDate[key] || []
+      ;(['上午', '下午', '晚上'] as Slot[]).forEach((s) => {
+        const slotTasks = d.tasks.filter((t) => t.slot === s)
+        rows.push({
+          日期: `${date.getMonth() + 1}/${date.getDate()}`,
+          星期: ['日', '一', '二', '三', '四', '五', '六'][date.getDay()],
+          时段: s,
+          任务数: slotTasks.length,
+          任务详情: slotTasks.map((t) => `${t.done ? '✅' : t.failed ? '❌' : '□'} ${t.text}`).join('\n'),
+          日记标题: dayDiaries.map((x) => x.title).join(' | '),
+          日记内容: dayDiaries.map((x) => x.content).join('\n---\n'),
+        })
+      })
+    })
+
+    const ws = XLSX.utils.json_to_sheet(rows)
+    const wb = XLSX.utils.book_new()
+    XLSX.utils.book_append_sheet(wb, ws, '周计划周记')
+    XLSX.writeFile(wb, `plan-diary-${selectedWeek.title}-${dateKey(new Date())}.xlsx`)
+  }
+
   const weekDayNumberByDateKey = useMemo(() => {
     const map: Record<string, number> = {}
     selectedWeekDates.forEach((d, idx) => {
@@ -1110,6 +1142,7 @@ function App() {
               <div className="todo-head" style={{ marginTop: 8 }}>
                 <h2>{todoView === 'week' ? '一周 To-Do（可打勾/打叉）' : '一月视图（与周视图数据联动）'}</h2>
                 <div className="view-toggle">
+                  <button onClick={exportWeekToExcel}>导出Excel</button>
                   <button className={todoView === 'week' ? 'active' : ''} onClick={() => setTodoView('week')}>周视图</button>
                   <button className={todoView === 'month' ? 'active' : ''} onClick={() => setTodoView('month')}>月视图</button>
                 </div>
