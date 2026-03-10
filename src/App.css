@@ -50,6 +50,14 @@ button:hover { opacity:.9; }
   .flow-wrap .flow { height: 300px; }
   .compose-title { font-size: 22px; }
 }
+
+@media (max-width: 420px) {
+  .panel { padding: 10px; }
+  h1 { font-size: 20px; }
+  .month-grid { grid-template-columns: 1fr; }
+  .month-weekday { display: none; }
+  .bottom-nav { gap: 6px; padding: 8px 8px calc(8px + env(safe-area-inset-bottom)); }
+}
 .day-card { background:#fafafa; border:1px solid #eee; border-radius:12px; padding:8px; }
 .day-card h3 { margin:0 0 6px; }
 .day-card h4 { margin:8px 0 4px; font-size:13px; color:#666; }
@@ -148,7 +156,8 @@ body {
 }
 
 .app {
-  max-width: 980px;
+  width: min(100%, 980px);
+  margin-inline: auto;
 }
 
 header {
