@@ -99,6 +99,7 @@ function App() {
   const [rootGoal, setRootGoal] = useState('')
   const [weekGoals, setWeekGoals] = useState<WeekGoal[]>([])
   const [weekTitle, setWeekTitle] = useState('')
+  const [showWeekGoalDropdown, setShowWeekGoalDropdown] = useState(false)
 
   const [selectedWeekId, setSelectedWeekId] = useState<string>('')
   const selectedWeek = weekGoals.find((w) => w.id === selectedWeekId)
@@ -343,6 +344,12 @@ function App() {
     setWeekGoals((prev) => [...prev, w])
     setSelectedWeekId(w.id)
     setWeekTitle('')
+  }
+
+  const deleteWeek = (weekId: string) => {
+    pushUndoSnapshot()
+    setWeekGoals((prev) => prev.filter((w) => w.id !== weekId))
+    if (selectedWeekId === weekId) setSelectedWeekId('')
   }
 
   const addTask = () => {
@@ -823,19 +830,30 @@ function App() {
         <>
           <section className="panel">
             <h2>1) 周目标 ↔ 日目标（合并交互）</h2>
-            <div className="row compact-controls">
-              <input className="span-2" value={username} onChange={(e) => setUsername(e.target.value)} placeholder="用户名（用于自动分文件夹归档）" />
-              <input value={weekTitle} onChange={(e) => setWeekTitle(e.target.value)} placeholder="新增周目标" />
-              <button onClick={addWeek}>添加周目标</button>
-            </div>
+            <button className="week-goal-toggle" onClick={() => setShowWeekGoalDropdown((v) => !v)}>
+              输入你的周目标 {showWeekGoalDropdown ? '▴' : '▾'}
+            </button>
 
-            <div className="chips">
-              {weekGoals.map((w) => (
-                <button key={w.id} className={selectedWeekId === w.id ? 'chip active' : 'chip'} onClick={() => setSelectedWeekId(w.id)}>
-                  {w.title}
-                </button>
-              ))}
-            </div>
+            {showWeekGoalDropdown && (
+              <div className="week-goal-dropdown">
+                <div className="row compact-controls">
+                  <input className="span-2" value={username} onChange={(e) => setUsername(e.target.value)} placeholder="用户名（用于自动分文件夹归档）" />
+                  <input value={weekTitle} onChange={(e) => setWeekTitle(e.target.value)} placeholder="新增周目标" />
+                  <button onClick={addWeek}>添加</button>
+                </div>
+
+                <div className="chips" style={{ marginTop: 8 }}>
+                  {weekGoals.map((w) => (
+                    <div key={w.id} className={selectedWeekId === w.id ? 'chip active' : 'chip'} style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                      <button style={{ background: 'transparent', color: 'inherit', border: 'none', padding: 0, boxShadow: 'none' }} onClick={() => setSelectedWeekId(w.id)}>
+                        {w.title}
+                      </button>
+                      <button className="schedule-box-btn" onClick={() => deleteWeek(w.id)}>✕</button>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
 
             <div className="row compact-controls" style={{ marginTop: 8 }}>
               <select value={day} onChange={(e) => setDay(Number(e.target.value))}>
