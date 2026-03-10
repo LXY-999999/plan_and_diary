@@ -812,27 +812,36 @@ function App() {
                 <button onClick={addQuadrantItem}>添加到象限</button>
               </div>
 
-              <div className="month-grid" style={{ marginTop: 8 }}>
-                {(Object.keys(groupedQuadrants) as QuadrantKey[]).map((key) => (
-                  <div key={key} className="month-cell">
-                    <h4>{quadrantLabel[key]}</h4>
-                    {(groupedQuadrants[key] || []).length === 0 ? (
-                      <small className="muted">暂无</small>
-                    ) : (
-                      (groupedQuadrants[key] || []).map((item) => (
-                        <label key={item.id} className="mini-task" style={{ display: 'block', whiteSpace: 'normal' }}>
-                          <input
-                            type="checkbox"
-                            checked={!!quadrantSelectedIds[item.id]}
-                            onChange={() => toggleQuadrantSelected(item.id)}
-                            style={{ width: 16, marginRight: 6 }}
-                          />
-                          {item.text}
-                        </label>
-                      ))
-                    )}
-                  </div>
-                ))}
+              <div className="matrix-wrap" style={{ marginTop: 8 }}>
+                <div className="matrix-y-axis">重要性 ↑</div>
+                <div className="matrix-grid">
+                  {([
+                    'important_not_urgent',
+                    'important_urgent',
+                    'not_important_not_urgent',
+                    'not_important_urgent',
+                  ] as QuadrantKey[]).map((key) => (
+                    <div key={key} className="matrix-cell">
+                      <h4>{quadrantLabel[key]}</h4>
+                      {(groupedQuadrants[key] || []).length === 0 ? (
+                        <small className="muted">暂无</small>
+                      ) : (
+                        (groupedQuadrants[key] || []).map((item) => (
+                          <label key={item.id} className="mini-task" style={{ display: 'block', whiteSpace: 'normal' }}>
+                            <input
+                              type="checkbox"
+                              checked={!!quadrantSelectedIds[item.id]}
+                              onChange={() => toggleQuadrantSelected(item.id)}
+                              style={{ width: 16, marginRight: 6 }}
+                            />
+                            {item.text}
+                          </label>
+                        ))
+                      )}
+                    </div>
+                  ))}
+                </div>
+                <div className="matrix-x-axis">紧急性 →</div>
               </div>
 
               <div className="row" style={{ marginTop: 8 }}>
