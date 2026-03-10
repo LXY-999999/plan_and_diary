@@ -887,10 +887,10 @@ function App() {
   }, [diariesByDate, appliedDiarySearch])
 
   const quadrantLabel: Record<QuadrantKey, string> = {
-    important_urgent: '🚨 重要且紧急',
-    important_not_urgent: '🎯 重要不紧急',
-    not_important_urgent: '⏱️ 不重要但紧急',
-    not_important_not_urgent: '🧹 不重要不紧急',
+    important_urgent: '重要且紧急',
+    important_not_urgent: '重要不紧急',
+    not_important_urgent: '不重要但紧急',
+    not_important_not_urgent: '不重要不紧急',
   }
 
   const quadrantEmoji: Record<QuadrantKey, string> = {
@@ -1190,10 +1190,10 @@ function App() {
                   disabled={selectedTreeNodeId === 'root'}
                 >
                   <option value="">不入象限</option>
-                  <option value="important_urgent">🚨 重要且紧急</option>
-                  <option value="important_not_urgent">🎯 重要不紧急</option>
-                  <option value="not_important_urgent">⏱️ 不重要但紧急</option>
-                  <option value="not_important_not_urgent">🧹 不重要不紧急</option>
+                  <option value="important_urgent">重要且紧急</option>
+                  <option value="important_not_urgent">重要不紧急</option>
+                  <option value="not_important_urgent">不重要但紧急</option>
+                  <option value="not_important_not_urgent">不重要不紧急</option>
                 </select>
                 <input value={treeNodeLabelInput} onChange={(e) => setTreeNodeLabelInput(e.target.value)} placeholder="节点名称" disabled={selectedTreeNodeId === 'root'} />
                 <button onClick={renameTreeNode}>重命名</button>
@@ -1213,10 +1213,10 @@ function App() {
                 </ReactFlow>
               </div>
               <div className="row" style={{ marginTop: 6 }}>
-                <button onClick={() => syncTreeNodeToQuadrant(selectedTreeNodeId, 'important_urgent')} disabled={selectedTreeNodeId === 'root'}>🚨同步</button>
-                <button onClick={() => syncTreeNodeToQuadrant(selectedTreeNodeId, 'important_not_urgent')} disabled={selectedTreeNodeId === 'root'}>🎯同步</button>
-                <button onClick={() => syncTreeNodeToQuadrant(selectedTreeNodeId, 'not_important_urgent')} disabled={selectedTreeNodeId === 'root'}>⏱️同步</button>
-                <button onClick={() => syncTreeNodeToQuadrant(selectedTreeNodeId, 'not_important_not_urgent')} disabled={selectedTreeNodeId === 'root'}>🧹同步</button>
+                <button onClick={() => syncTreeNodeToQuadrant(selectedTreeNodeId, 'important_urgent')} disabled={selectedTreeNodeId === 'root'}>同步到重要且紧急</button>
+                <button onClick={() => syncTreeNodeToQuadrant(selectedTreeNodeId, 'important_not_urgent')} disabled={selectedTreeNodeId === 'root'}>同步到重要不紧急</button>
+                <button onClick={() => syncTreeNodeToQuadrant(selectedTreeNodeId, 'not_important_urgent')} disabled={selectedTreeNodeId === 'root'}>同步到不重要但紧急</button>
+                <button onClick={() => syncTreeNodeToQuadrant(selectedTreeNodeId, 'not_important_not_urgent')} disabled={selectedTreeNodeId === 'root'}>同步到不重要不紧急</button>
                 <button onClick={() => deleteTreeNode(selectedTreeNodeId)} disabled={selectedTreeNodeId === 'root'}>删除节点</button>
               </div>
             </details>
