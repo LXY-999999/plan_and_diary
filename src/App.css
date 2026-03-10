@@ -6,6 +6,8 @@ header { display:flex; justify-content:space-between; align-items:center; margin
 h1 { margin:0; font-size: clamp(15px, 2.2vw, 20px); }
 .panel { background:#fff; border-radius:10px; padding:8px; margin-bottom:7px; box-shadow:0 3px 10px rgba(0,0,0,.05); }
 .row { display:flex; gap:5px; flex-wrap:wrap; }
+details > summary { cursor: pointer; font-weight: 700; list-style: none; }
+details > summary::-webkit-details-marker { display: none; }
 input, select, textarea, button { border-radius:8px; border:1px solid #ddd; padding:5px 7px; font-size:12px; }
 input, select, textarea { background:#fff; }
 button { cursor:pointer; background:#111; color:#fff; border:none; }

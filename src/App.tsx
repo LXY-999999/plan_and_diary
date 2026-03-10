@@ -795,87 +795,93 @@ function App() {
           </section>
 
           <section className="panel">
-            <h2>3) 计划四象限（艾森豪威尔）</h2>
-            <div className="row">
-              <select value={quadrantType} onChange={(e) => setQuadrantType(e.target.value as QuadrantKey)}>
-                <option value="important_urgent">重要且紧急</option>
-                <option value="important_not_urgent">重要不紧急</option>
-                <option value="not_important_urgent">不重要但紧急</option>
-                <option value="not_important_not_urgent">不重要不紧急</option>
-              </select>
-              <input value={quadrantInput} onChange={(e) => setQuadrantInput(e.target.value)} placeholder="输入四象限计划" />
-              <button onClick={addQuadrantItem}>添加到象限</button>
-            </div>
+            <details>
+              <summary>3) 计划四象限（艾森豪威尔）</summary>
+              <div className="row" style={{ marginTop: 8 }}>
+                <select value={quadrantType} onChange={(e) => setQuadrantType(e.target.value as QuadrantKey)}>
+                  <option value="important_urgent">重要且紧急</option>
+                  <option value="important_not_urgent">重要不紧急</option>
+                  <option value="not_important_urgent">不重要但紧急</option>
+                  <option value="not_important_not_urgent">不重要不紧急</option>
+                </select>
+                <input value={quadrantInput} onChange={(e) => setQuadrantInput(e.target.value)} placeholder="输入四象限计划" />
+                <button onClick={addQuadrantItem}>添加到象限</button>
+              </div>
 
-            <div className="month-grid" style={{ marginTop: 8 }}>
-              {(Object.keys(groupedQuadrants) as QuadrantKey[]).map((key) => (
-                <div key={key} className="month-cell">
-                  <h4>{quadrantLabel[key]}</h4>
-                  {(groupedQuadrants[key] || []).length === 0 ? (
-                    <small className="muted">暂无</small>
-                  ) : (
-                    (groupedQuadrants[key] || []).map((item) => (
-                      <label key={item.id} className="mini-task" style={{ display: 'block', whiteSpace: 'normal' }}>
-                        <input
-                          type="checkbox"
-                          checked={!!quadrantSelectedIds[item.id]}
-                          onChange={() => toggleQuadrantSelected(item.id)}
-                          style={{ width: 16, marginRight: 6 }}
-                        />
-                        {item.text}
-                      </label>
-                    ))
-                  )}
-                </div>
-              ))}
-            </div>
+              <div className="month-grid" style={{ marginTop: 8 }}>
+                {(Object.keys(groupedQuadrants) as QuadrantKey[]).map((key) => (
+                  <div key={key} className="month-cell">
+                    <h4>{quadrantLabel[key]}</h4>
+                    {(groupedQuadrants[key] || []).length === 0 ? (
+                      <small className="muted">暂无</small>
+                    ) : (
+                      (groupedQuadrants[key] || []).map((item) => (
+                        <label key={item.id} className="mini-task" style={{ display: 'block', whiteSpace: 'normal' }}>
+                          <input
+                            type="checkbox"
+                            checked={!!quadrantSelectedIds[item.id]}
+                            onChange={() => toggleQuadrantSelected(item.id)}
+                            style={{ width: 16, marginRight: 6 }}
+                          />
+                          {item.text}
+                        </label>
+                      ))
+                    )}
+                  </div>
+                ))}
+              </div>
 
-            <div className="row" style={{ marginTop: 8 }}>
-              <span className="muted">选择日期（可多选）:</span>
-              {selectedWeekDates.map((d, i) => (
-                <button
-                  key={`assign-${i + 1}`}
-                  className={assignDays.includes(i + 1) ? 'chip active' : 'chip'}
-                  onClick={() => toggleAssignDay(i + 1)}
-                >
-                  {d.getMonth() + 1}/{d.getDate()}
-                </button>
-              ))}
-            </div>
+              <div className="row" style={{ marginTop: 8 }}>
+                <span className="muted">选择日期（可多选）:</span>
+                {selectedWeekDates.map((d, i) => (
+                  <button
+                    key={`assign-${i + 1}`}
+                    className={assignDays.includes(i + 1) ? 'chip active' : 'chip'}
+                    onClick={() => toggleAssignDay(i + 1)}
+                  >
+                    {d.getMonth() + 1}/{d.getDate()}
+                  </button>
+                ))}
+              </div>
 
-            <div className="row" style={{ marginTop: 8 }}>
-              <select value={assignSlot} onChange={(e) => setAssignSlot(e.target.value as Slot)}>
-                <option>上午</option>
-                <option>下午</option>
-                <option>晚上</option>
-              </select>
-              <button onClick={addQuadrantToWeekPlan}>添加到周计划（自动联动月视图）</button>
-            </div>
+              <div className="row" style={{ marginTop: 8 }}>
+                <select value={assignSlot} onChange={(e) => setAssignSlot(e.target.value as Slot)}>
+                  <option>上午</option>
+                  <option>下午</option>
+                  <option>晚上</option>
+                </select>
+                <button onClick={addQuadrantToWeekPlan}>添加到周计划（自动联动月视图）</button>
+              </div>
+            </details>
           </section>
 
           <section className="panel flow-wrap">
-            <h2>目标树可视化（思维导图）</h2>
-            <div className="flow">
-              <ReactFlow nodes={flow.nodes} edges={flow.edges} fitView>
-                <Background />
-                <Controls />
-                <MiniMap />
-              </ReactFlow>
-            </div>
+            <details>
+              <summary>目标树可视化（思维导图）</summary>
+              <div className="flow" style={{ marginTop: 8 }}>
+                <ReactFlow nodes={flow.nodes} edges={flow.edges} fitView>
+                  <Background />
+                  <Controls />
+                  <MiniMap />
+                </ReactFlow>
+              </div>
+            </details>
           </section>
 
           <section className="panel page-bottom-pad">
-            <div className="todo-head">
-              <h2>{todoView === 'week' ? '一周 To-Do（可打勾/打叉）' : '一月视图（与周视图数据联动）'}</h2>
-              <div className="view-toggle">
-                <button className={todoView === 'week' ? 'active' : ''} onClick={() => setTodoView('week')}>周视图</button>
-                <button className={todoView === 'month' ? 'active' : ''} onClick={() => setTodoView('month')}>月视图</button>
+            <details>
+              <summary>执行看板（周视图 / 月视图）</summary>
+              <div className="todo-head" style={{ marginTop: 8 }}>
+                <h2>{todoView === 'week' ? '一周 To-Do（可打勾/打叉）' : '一月视图（与周视图数据联动）'}</h2>
+                <div className="view-toggle">
+                  <button className={todoView === 'week' ? 'active' : ''} onClick={() => setTodoView('week')}>周视图</button>
+                  <button className={todoView === 'month' ? 'active' : ''} onClick={() => setTodoView('month')}>月视图</button>
+                </div>
               </div>
-            </div>
-            {!selectedWeek ? (
-              <p>请先选择一个周目标</p>
-            ) : (
-              <>
+              {!selectedWeek ? (
+                <p>请先选择一个周目标</p>
+              ) : (
+                <>
                 {bulkModeWeekId === selectedWeek.id && (
                   <div className="bulk-bar">
                     <span>多选模式（已选 {Object.values(bulkSelected).filter(Boolean).length} 项）</span>
@@ -1006,6 +1012,7 @@ function App() {
                 )}
               </>
             )}
+            </details>
           </section>
         </>
       ) : (
