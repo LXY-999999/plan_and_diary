@@ -1055,18 +1055,17 @@ function App() {
             <div className="tree-node-card" onClick={() => setSelectedTreeNodeId(node.id)} onDoubleClick={() => renameTreeNodeById(node.id)}>
               <div>{`${node.goalLayer}｜${node.label}`}</div>
               {node.id !== 'root' && (
-                <div style={{ display: 'flex', gap: 4, marginTop: 4 }}>
-                  <select
-                    className="mini-move-select"
-                    value={node.quadrant || ''}
-                    onChange={(e) => syncTreeNodeToQuadrant(node.id, e.target.value as '' | QuadrantKey)}
-                  >
-                    <option value="">不入象限</option>
-                    <option value="important_urgent">重要且紧急</option>
-                    <option value="important_not_urgent">重要不紧急</option>
-                    <option value="not_important_urgent">不重要但紧急</option>
-                    <option value="not_important_not_urgent">不重要不紧急</option>
-                  </select>
+                <div style={{ display: 'flex', gap: 4, marginTop: 4, alignItems: 'center' }}>
+                  <details className="tree-node-menu">
+                    <summary className="schedule-box-btn">▾</summary>
+                    <div className="tree-node-menu-pop">
+                      <button onClick={() => syncTreeNodeToQuadrant(node.id, '')}>不入象限</button>
+                      <button onClick={() => syncTreeNodeToQuadrant(node.id, 'important_urgent')}>重要且紧急</button>
+                      <button onClick={() => syncTreeNodeToQuadrant(node.id, 'important_not_urgent')}>重要不紧急</button>
+                      <button onClick={() => syncTreeNodeToQuadrant(node.id, 'not_important_urgent')}>不重要但紧急</button>
+                      <button onClick={() => syncTreeNodeToQuadrant(node.id, 'not_important_not_urgent')}>不重要不紧急</button>
+                    </div>
+                  </details>
                   <button className="schedule-box-btn" onClick={() => deleteTreeNode(node.id)}>✕</button>
                 </div>
               )}
