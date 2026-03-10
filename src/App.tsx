@@ -989,6 +989,39 @@ function App() {
     }
   }
 
+  const deleteTreeNode = (nodeId: string) => {
+    if (!nodeId || nodeId === 'root') {
+      alert('根节点不可删除')
+      return
+    }
+    pushUndoSnapshot()
+
+    const nodeMap = new Map(planTreeNodes.map((n) => [n.id, n]))
+    const removeSet = new Set<string>()
+    const stack = [nodeId]
+    while (stack.length) {
+      const id = stack.pop()!
+      if (removeSet.has(id)) continue
+      removeSet.add(id)
+      const n = nodeMap.get(id)
+      if (!n) continue
+      if (n.leftId) stack.push(n.leftId)
+      if (n.rightId) stack.push(n.rightId)
+    }
+
+    setPlanTreeNodes((prev) =>
+      prev
+        .filter((n) => !removeSet.has(n.id))
+        .map((n) => ({
+          ...n,
+          leftId: n.leftId && removeSet.has(n.leftId) ? undefined : n.leftId,
+          rightId: n.rightId && removeSet.has(n.rightId) ? undefined : n.rightId,
+        })),
+    )
+    setQuadrantItems((prev) => prev.filter((q) => !(q.sourceNodeId && removeSet.has(q.sourceNodeId))))
+    setSelectedTreeNodeId('root')
+  }
+
   const flow = useMemo(() => {
     const nodeMap = new Map(planTreeNodes.map((n) => [n.id, n]))
     if (!nodeMap.has('root')) return { nodes: [] as Node[], edges: [] as Edge[] }
@@ -1168,11 +1201,23 @@ function App() {
                 <button onClick={() => addTreeChild('right')}>+右子</button>
               </div>
               <div className="flow" style={{ marginTop: 8 }}>
-                <ReactFlow nodes={flow.nodes} edges={flow.edges} fitView>
+                <ReactFlow
+                  nodes={flow.nodes}
+                  edges={flow.edges}
+                  fitView
+                  onNodeClick={(_, node) => setSelectedTreeNodeId(node.id)}
+                >
                   <Background />
                   <Controls />
-                  <MiniMap />
+                  <MiniMap style={{ width: 90, height: 60 }} />
                 </ReactFlow>
+              </div>
+              <div className="row" style={{ marginTop: 6 }}>
+                <button onClick={() => syncTreeNodeToQuadrant(selectedTreeNodeId, 'important_urgent')} disabled={selectedTreeNodeId === 'root'}>🚨同步</button>
+                <button onClick={() => syncTreeNodeToQuadrant(selectedTreeNodeId, 'important_not_urgent')} disabled={selectedTreeNodeId === 'root'}>🎯同步</button>
+                <button onClick={() => syncTreeNodeToQuadrant(selectedTreeNodeId, 'not_important_urgent')} disabled={selectedTreeNodeId === 'root'}>⏱️同步</button>
+                <button onClick={() => syncTreeNodeToQuadrant(selectedTreeNodeId, 'not_important_not_urgent')} disabled={selectedTreeNodeId === 'root'}>🧹同步</button>
+                <button onClick={() => deleteTreeNode(selectedTreeNodeId)} disabled={selectedTreeNodeId === 'root'}>删除节点</button>
               </div>
             </details>
           </section>
