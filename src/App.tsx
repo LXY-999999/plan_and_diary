@@ -106,21 +106,11 @@ function App() {
   const [goalType, setGoalType] = useState<GoalType>('月目标')
   const [rootGoal, setRootGoal] = useState('')
   const [weekGoals, setWeekGoals] = useState<WeekGoal[]>([])
-  const [weekTitle, setWeekTitle] = useState('')
-  const [showWeekGoalDropdown, setShowWeekGoalDropdown] = useState(false)
-  const [showDayGoalDropdown, setShowDayGoalDropdown] = useState(false)
-  const [dayGoalBatchInput, setDayGoalBatchInput] = useState('')
 
   const [selectedWeekId, setSelectedWeekId] = useState<string>('')
   const selectedWeek = weekGoals.find((w) => w.id === selectedWeekId)
 
-  const [taskInput, setTaskInput] = useState('')
-  const [day, setDay] = useState(1)
-  const [slot, setSlot] = useState<Slot>('上午')
-
   const [openAIKey, setOpenAIKey] = useState('')
-  const [autoPrompt, setAutoPrompt] = useState('')
-  const [loadingAI, setLoadingAI] = useState(false)
 
   const [page, setPage] = useState<Page>('plan')
   const [todoView, setTodoView] = useState<TodoView>('week')
@@ -168,9 +158,6 @@ function App() {
       const idx = selectedWeekDates.findIndex((d) => dateKey(d) === todayMarker)
       const targetDay = idx >= 0 ? idx + 1 : 1
 
-      setTaskInput('')
-      setDay(targetDay)
-      setSlot('上午')
       setDiaryDay(targetDay)
       setDiaryTitle('')
       setDiaryContent('')
@@ -345,63 +332,6 @@ function App() {
       setSelectedWeekId(last.selectedWeekId)
       return prev.slice(0, -1)
     })
-  }
-
-  const addWeek = () => {
-    if (!weekTitle.trim()) return
-    pushUndoSnapshot()
-    const w: WeekGoal = { id: uuid(), title: weekTitle.trim(), days: emptyDays(), startDate: dateKey(normalizeDate(new Date())) }
-    setWeekGoals((prev) => [...prev, w])
-    setSelectedWeekId(w.id)
-    setWeekTitle('')
-  }
-
-  const deleteWeek = (weekId: string) => {
-    pushUndoSnapshot()
-    setWeekGoals((prev) => prev.filter((w) => w.id !== weekId))
-    if (selectedWeekId === weekId) setSelectedWeekId('')
-  }
-
-  const addTask = () => {
-    if (!selectedWeek || !taskInput.trim()) return
-    pushUndoSnapshot()
-    setWeekGoals((prev) =>
-      prev.map((w) => {
-        if (w.id !== selectedWeek.id) return w
-        return {
-          ...w,
-          days: w.days.map((d) =>
-            d.day === day ? { ...d, tasks: [...d.tasks, { id: uuid(), text: taskInput.trim(), slot }] } : d,
-          ),
-        }
-      }),
-    )
-    setTaskInput('')
-  }
-
-  const addBatchDayGoals = () => {
-    if (!selectedWeek) return
-    const items = dayGoalBatchInput
-      .split('\n')
-      .map((x) => x.trim())
-      .filter(Boolean)
-    if (!items.length) return
-
-    pushUndoSnapshot()
-    setWeekGoals((prev) =>
-      prev.map((w) => {
-        if (w.id !== selectedWeek.id) return w
-        return {
-          ...w,
-          days: w.days.map((d) =>
-            d.day === day
-              ? { ...d, tasks: [...d.tasks, ...items.map((text) => ({ id: uuid(), text, slot }))] }
-              : d,
-          ),
-        }
-      }),
-    )
-    setDayGoalBatchInput('')
   }
 
   const addQuadrantItemInCell = (quadrant: QuadrantKey) => {
@@ -732,62 +662,6 @@ function App() {
     })
   }
 
-  const autoGenerateWeek = async () => {
-    if (!selectedWeek || !openAIKey.trim()) {
-      alert('请先选择周目标并填写 OpenAI Key')
-      return
-    }
-
-    setLoadingAI(true)
-    try {
-      const prompt =
-        autoPrompt.trim() ||
-        `将目标“${selectedWeek.title}”拆解为 7 天任务，每天分上午、下午、晚上。返回 JSON，格式为 {"days":[{"day":1,"morning":"...","afternoon":"...","evening":"..."}]}`
-
-      const res = await fetch('https://api.openai.com/v1/chat/completions', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${openAIKey.trim()}` },
-        body: JSON.stringify({
-          model: 'gpt-4o-mini',
-          response_format: { type: 'json_object' },
-          messages: [
-            { role: 'system', content: '你是计划拆解助手。仅输出 JSON。' },
-            { role: 'user', content: prompt },
-          ],
-        }),
-      })
-
-      if (!res.ok) throw new Error(`OpenAI API 调用失败: ${res.status}`)
-      const data = await res.json()
-      const content = data?.choices?.[0]?.message?.content
-      if (!content) throw new Error('返回内容为空')
-
-      const parsed = JSON.parse(content)
-      const arr = parsed?.days || parsed?.plan || parsed
-      if (!Array.isArray(arr)) throw new Error('JSON 结构不符合预期，应为数组')
-
-      setWeekGoals((prev) =>
-        prev.map((w) => {
-          if (w.id !== selectedWeek.id) return w
-          const days = emptyDays().map((d) => {
-            const m = arr.find((x: any) => Number(x.day) === d.day) || {}
-            const tasks: DayTask[] = []
-            if (m.morning) tasks.push({ id: uuid(), text: String(m.morning), slot: '上午' })
-            if (m.afternoon) tasks.push({ id: uuid(), text: String(m.afternoon), slot: '下午' })
-            if (m.evening) tasks.push({ id: uuid(), text: String(m.evening), slot: '晚上' })
-            return { ...d, tasks }
-          })
-          return { ...w, days }
-        }),
-      )
-    } catch (e: any) {
-      alert(`自动拆解失败：${e?.message || '请检查 Key 或提示词格式'}`)
-      console.error(e)
-    } finally {
-      setLoadingAI(false)
-    }
-  }
-
   const clearPlanData = () => {
     if (!confirm('确认仅清空【计划模块】数据吗？')) return
     pushUndoSnapshot()
@@ -795,17 +669,11 @@ function App() {
     setRootGoal('')
     setWeekGoals([])
     setSelectedWeekId('')
-    setWeekTitle('')
-    setTaskInput('')
     setOpenAIKey('')
-    setAutoPrompt('')
     setQuadrantItems([])
     setTaskScheduleOpenId(null)
     setTaskScheduleDays([])
     setTaskScheduleSlot('上午')
-    setShowWeekGoalDropdown(false)
-    setShowDayGoalDropdown(false)
-    setDayGoalBatchInput('')
   }
 
   const clearDiaryData = () => {
@@ -1047,83 +915,6 @@ function App() {
 
       {page === 'plan' ? (
         <>
-          <section className="panel">
-            <h2>1) 周目标 ↔ 日目标（合并交互）</h2>
-            <button className="week-goal-toggle" onClick={() => setShowWeekGoalDropdown((v) => !v)}>
-              输入你的周目标 {showWeekGoalDropdown ? '▴' : '▾'}
-            </button>
-
-            {showWeekGoalDropdown && (
-              <div className="week-goal-dropdown">
-                <div className="row compact-controls">
-                  <input className="span-2" value={username} onChange={(e) => setUsername(e.target.value)} placeholder="用户名（用于自动分文件夹归档）" />
-                  <input value={weekTitle} onChange={(e) => setWeekTitle(e.target.value)} placeholder="新增周目标" />
-                  <button onClick={addWeek}>添加</button>
-                </div>
-
-                <div className="chips" style={{ marginTop: 8 }}>
-                  {weekGoals.map((w) => (
-                    <div key={w.id} className={selectedWeekId === w.id ? 'chip active' : 'chip'} style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                      <button style={{ background: 'transparent', color: 'inherit', border: 'none', padding: 0, boxShadow: 'none' }} onClick={() => setSelectedWeekId(w.id)}>
-                        {w.title}
-                      </button>
-                      <button className="schedule-box-btn" onClick={() => deleteWeek(w.id)}>✕</button>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            <button className="week-goal-toggle" style={{ marginTop: 8 }} onClick={() => setShowDayGoalDropdown((v) => !v)}>
-              请添加你的日目标 {showDayGoalDropdown ? '▴' : '▾'}
-            </button>
-
-            {showDayGoalDropdown && (
-              <div className="week-goal-dropdown">
-                <div className="row compact-controls">
-                  <select value={day} onChange={(e) => setDay(Number(e.target.value))}>
-                    {selectedWeekDates.map((d, i) => (
-                      <option key={i + 1} value={i + 1}>{d.getMonth() + 1}月{d.getDate()}日</option>
-                    ))}
-                  </select>
-                  <select value={slot} onChange={(e) => setSlot(e.target.value as Slot)}>
-                    <option>上午</option>
-                    <option>下午</option>
-                    <option>晚上</option>
-                  </select>
-                  <input className="span-2" value={taskInput} onChange={(e) => setTaskInput(e.target.value)} placeholder="单条输入" />
-                  <button onClick={addTask}>添加单条</button>
-                </div>
-
-                <textarea
-                  style={{ width: '100%', marginTop: 6 }}
-                  rows={3}
-                  value={dayGoalBatchInput}
-                  onChange={(e) => setDayGoalBatchInput(e.target.value)}
-                  placeholder={'多条输入（每行一条）\n例如：\n复盘昨天\n完成PRD\n30分钟运动'}
-                />
-                <div className="row" style={{ marginTop: 6 }}>
-                  <button onClick={addBatchDayGoals}>批量添加（多选输入）</button>
-                </div>
-
-                <div className="chips quick-actions" style={{ marginTop: 6 }}>
-                  <button className="chip" onClick={() => setTaskInput('复盘昨天完成情况')}>+ 复盘</button>
-                  <button className="chip" onClick={() => setTaskInput('处理最重要的一件事')}>+ MIT</button>
-                  <button className="chip" onClick={() => setTaskInput('整理收件箱与待办')}>+ 清空待办</button>
-                </div>
-              </div>
-            )}
-
-            <details>
-              <summary>🤖 ChatGPT 自动拆解为 7 天（需 OpenAI Key）</summary>
-              <div className="row">
-                <input value={openAIKey} onChange={(e) => setOpenAIKey(e.target.value)} placeholder="OpenAI API Key" type="password" />
-              </div>
-              <textarea value={autoPrompt} onChange={(e) => setAutoPrompt(e.target.value)} placeholder="可选：自定义拆解提示词" rows={3} />
-              <button onClick={autoGenerateWeek} disabled={loadingAI}>{loadingAI ? '生成中...' : '自动生成7天早中晚'}</button>
-            </details>
-          </section>
-
           <section className="panel">
             <details>
               <summary>3) 计划四象限（艾森豪威尔）</summary>
