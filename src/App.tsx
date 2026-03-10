@@ -592,6 +592,27 @@ function App() {
     setBulkModeWeekId(null)
   }
 
+  const applyBulkEdit = () => {
+    if (!bulkModeWeekId) return
+    const nextText = prompt('批量编辑：输入新的任务内容')?.trim()
+    if (!nextText) return
+    pushUndoSnapshot()
+    setWeekGoals((prev) =>
+      prev.map((w) => {
+        if (w.id !== bulkModeWeekId) return w
+        return {
+          ...w,
+          days: w.days.map((d) => ({
+            ...d,
+            tasks: d.tasks.map((t) => (bulkSelected[`${d.day}-${t.id}`] ? { ...t, text: nextText } : t)),
+          })),
+        }
+      }),
+    )
+    setBulkSelected({})
+    setBulkModeWeekId(null)
+  }
+
   const cancelBulk = () => {
     setBulkSelected({})
     setBulkModeWeekId(null)
@@ -948,6 +969,7 @@ function App() {
                     <div>
                       <button onClick={() => applyBulkStatus('done')}>批量✅</button>
                       <button onClick={() => applyBulkStatus('failed')}>批量❌</button>
+                      <button onClick={applyBulkEdit}>编辑</button>
                       <button onClick={applyBulkDelete}>删除</button>
                       <button onClick={cancelBulk}>退出</button>
                     </div>
