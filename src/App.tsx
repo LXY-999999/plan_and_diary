@@ -825,15 +825,11 @@ function App() {
     setAppliedDiarySearch({ year: '', month: '', day: '' })
   }
 
-  const exportWeekToExcel = () => {
-    if (!selectedWeek) {
-      alert('请先选择一个周目标')
-      return
-    }
-
+  const buildWeekSheets = (targetWeek: WeekGoal, sheetPrefix = '周') => {
     const weekday = ['日', '一', '二', '三', '四', '五', '六']
-    const dayBlocks = selectedWeek.days.map((d) => {
-      const date = selectedWeekDates[d.day - 1]
+    const weekDates = buildWeekDates(targetWeek.startDate)
+    const dayBlocks = targetWeek.days.map((d) => {
+      const date = weekDates[d.day - 1]
       const key = dateKey(date)
       return {
         title: `${date.getMonth() + 1}/${date.getDate()}(周${weekday[date.getDay()]})`,
@@ -844,26 +840,21 @@ function App() {
 
     const maxTasks = Math.max(8, ...dayBlocks.map((x) => x.tasks.length))
     const aoa: any[][] = []
-
     const totalCols = dayBlocks.length * 2
     const rangeText = `${dayBlocks[0]?.title || ''} - ${dayBlocks[dayBlocks.length - 1]?.title || ''}`
 
-    // 模板化表头
     aoa.push(['本周计划模板', ...Array(totalCols - 1).fill('')])
-    aoa.push([`周目标：${selectedWeek.title}`, ...Array(totalCols - 1).fill('')])
+    aoa.push([`周目标：${targetWeek.title}`, ...Array(totalCols - 1).fill('')])
     aoa.push([`周范围：${rangeText}`, ...Array(totalCols - 1).fill('')])
 
-    // 每天标题（跨两列）
     const dayHeaderRow: string[] = []
     dayBlocks.forEach((d) => dayHeaderRow.push(d.title, ''))
     aoa.push(dayHeaderRow)
 
-    // 子表头
     const subHeaderRow: string[] = []
     dayBlocks.forEach(() => subHeaderRow.push('To Do', '状态'))
     aoa.push(subHeaderRow)
 
-    // 任务行：每个 todo 一行，右侧状态列 ✅/❌/空
     for (let i = 0; i < maxTasks; i++) {
       const row: string[] = []
       dayBlocks.forEach((d) => {
@@ -874,15 +865,12 @@ function App() {
       aoa.push(row)
     }
 
-    // 复盘模板行
     aoa.push([])
     aoa.push(['本周复盘', ...Array(totalCols - 1).fill('')])
     aoa.push(['做得好的事：', ...Array(totalCols - 1).fill('')])
     aoa.push(['下周改进：', ...Array(totalCols - 1).fill('')])
 
     const ws = XLSX.utils.aoa_to_sheet(aoa)
-
-    // 合并单元格（模板感）
     ws['!merges'] = [
       { s: { r: 0, c: 0 }, e: { r: 0, c: totalCols - 1 } },
       { s: { r: 1, c: 0 }, e: { r: 1, c: totalCols - 1 } },
@@ -892,14 +880,11 @@ function App() {
       { s: { r: maxTasks + 7, c: 0 }, e: { r: maxTasks + 7, c: totalCols - 1 } },
       { s: { r: maxTasks + 8, c: 0 }, e: { r: maxTasks + 8, c: totalCols - 1 } },
     ]
-
-    // 列宽（每一天两列）
     ws['!cols'] = dayBlocks.flatMap(() => [{ wch: 24 }, { wch: 8 }])
 
-    // 日记sheet：模板化（每天两列：标题/内容）
     const diaryAoa: any[][] = []
     diaryAoa.push(['本周日记模板', ...Array(totalCols - 1).fill('')])
-    diaryAoa.push([`周目标：${selectedWeek.title}`, ...Array(totalCols - 1).fill('')])
+    diaryAoa.push([`周目标：${targetWeek.title}`, ...Array(totalCols - 1).fill('')])
 
     const diaryHeaderRow: string[] = []
     dayBlocks.forEach((d) => diaryHeaderRow.push(d.title, ''))
@@ -928,10 +913,38 @@ function App() {
     ]
     diaryWs['!cols'] = dayBlocks.flatMap(() => [{ wch: 16 }, { wch: 36 }])
 
+    return {
+      planSheetName: `${sheetPrefix}-计划`,
+      diarySheetName: `${sheetPrefix}-日记`,
+      ws,
+      diaryWs,
+    }
+  }
+
+  const exportWeekToExcel = () => {
+    if (!selectedWeek) {
+      alert('请先选择一个周目标')
+      return
+    }
     const wb = XLSX.utils.book_new()
-    XLSX.utils.book_append_sheet(wb, ws, '周计划')
-    XLSX.utils.book_append_sheet(wb, diaryWs, '周日记')
+    const one = buildWeekSheets(selectedWeek, '本周')
+    XLSX.utils.book_append_sheet(wb, one.ws, one.planSheetName)
+    XLSX.utils.book_append_sheet(wb, one.diaryWs, one.diarySheetName)
     XLSX.writeFile(wb, `plan-week-${selectedWeek.title}-${dateKey(new Date())}.xlsx`)
+  }
+
+  const exportMonthToExcel = () => {
+    if (!weekGoals.length) {
+      alert('暂无可导出的周计划')
+      return
+    }
+    const wb = XLSX.utils.book_new()
+    weekGoals.forEach((w, idx) => {
+      const sheet = buildWeekSheets(w, `第${idx + 1}周`)
+      XLSX.utils.book_append_sheet(wb, sheet.ws, sheet.planSheetName)
+      XLSX.utils.book_append_sheet(wb, sheet.diaryWs, sheet.diarySheetName)
+    })
+    XLSX.writeFile(wb, `plan-month-${dateKey(new Date())}.xlsx`)
   }
 
   const weekDayNumberByDateKey = useMemo(() => {
@@ -1220,7 +1233,7 @@ function App() {
               <div className="todo-head" style={{ marginTop: 8 }}>
                 <h2>{todoView === 'week' ? '一周 To-Do（可打勾/打叉）' : '一月视图（与周视图数据联动）'}</h2>
                 <div className="view-toggle">
-                  <button onClick={exportWeekToExcel}>导出Excel</button>
+                  <button onClick={todoView === 'month' ? exportMonthToExcel : exportWeekToExcel}>{todoView === 'month' ? '导出月Excel' : '导出周Excel'}</button>
                   <button className={todoView === 'week' ? 'active' : ''} onClick={() => setTodoView('week')}>周视图</button>
                   <button className={todoView === 'month' ? 'active' : ''} onClick={() => setTodoView('month')}>月视图</button>
                 </div>
