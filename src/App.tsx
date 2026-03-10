@@ -420,6 +420,11 @@ function App() {
     setTaskScheduleDays((prev) => (prev.includes(dayNum) ? prev.filter((x) => x !== dayNum) : [...prev, dayNum].sort((a, b) => a - b)))
   }
 
+  const moveQuadrantItem = (itemId: string, targetQuadrant: QuadrantKey) => {
+    pushUndoSnapshot()
+    setQuadrantItems((prev) => prev.map((x) => (x.id === itemId ? { ...x, quadrant: targetQuadrant } : x)))
+  }
+
   const applyTaskScheduleToWeek = (item: QuadrantItem) => {
     if (!selectedWeek) {
       alert('请先选择周目标')
@@ -968,7 +973,19 @@ function App() {
                           <div key={item.id} className="mini-task" style={{ display: 'block', whiteSpace: 'normal', marginTop: 6 }}>
                             <div style={{ display: 'flex', justifyContent: 'space-between', gap: 6, alignItems: 'center' }}>
                               <span>{item.text}</span>
-                              <button className="schedule-box-btn" onClick={() => openTaskSchedule(item.id)}>▾</button>
+                              <div style={{ display: 'flex', gap: 4, alignItems: 'center' }}>
+                                <select
+                                  className="mini-move-select"
+                                  value={item.quadrant}
+                                  onChange={(e) => moveQuadrantItem(item.id, e.target.value as QuadrantKey)}
+                                >
+                                  <option value="important_not_urgent">↖</option>
+                                  <option value="important_urgent">↗</option>
+                                  <option value="not_important_not_urgent">↙</option>
+                                  <option value="not_important_urgent">↘</option>
+                                </select>
+                                <button className="schedule-box-btn" onClick={() => openTaskSchedule(item.id)}>▾</button>
+                              </div>
                             </div>
 
                             {taskScheduleOpenId === item.id && (
