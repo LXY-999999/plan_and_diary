@@ -18,14 +18,14 @@ type DiaryEntry = {
 type DayPlan = { day: number; tasks: DayTask[] }
 type WeekGoal = { id: string; title: string; days: DayPlan[]; startDate: string }
 type GoalLayer = '总目标' | '年目标' | '月目标' | '周目标'
-type PlanTreeNode = { id: string; label: string; goalLayer: GoalLayer; leftId?: string; rightId?: string }
+type PlanTreeNode = { id: string; label: string; goalLayer: GoalLayer; quadrant?: QuadrantKey; leftId?: string; rightId?: string }
 type Theme = 'genki' | 'mint'
 type GoalType = '年目标' | '月目标'
 type Page = 'plan' | 'diary'
 type TodoView = 'week' | 'month'
 type DiariesByDate = Record<string, DiaryEntry[]>
 type QuadrantKey = 'important_urgent' | 'important_not_urgent' | 'not_important_urgent' | 'not_important_not_urgent'
-type QuadrantItem = { id: string; text: string; quadrant: QuadrantKey; createdAt: number }
+type QuadrantItem = { id: string; text: string; quadrant: QuadrantKey; createdAt: number; sourceNodeId?: string }
 
 type PersistedState = {
   theme: Theme
@@ -115,6 +115,7 @@ function App() {
   const [selectedTreeNodeId, setSelectedTreeNodeId] = useState('root')
   const [treeNodeLabelInput, setTreeNodeLabelInput] = useState('')
   const [treeNodeLayerInput, setTreeNodeLayerInput] = useState<GoalLayer>('总目标')
+  const [treeNodeQuadrantInput, setTreeNodeQuadrantInput] = useState<'' | QuadrantKey>('')
 
   const [selectedWeekId, setSelectedWeekId] = useState<string>('')
   const selectedWeek = weekGoals.find((w) => w.id === selectedWeekId)
@@ -228,7 +229,8 @@ function App() {
         setPlanTreeNodes(
           data.planTreeNodes.map((n: any, idx: number) => ({
             ...n,
-            goalLayer: (n?.goalLayer as GoalLayer) || (idx === 0 ? '总目标' : '周目标'),
+            label: (n?.id === 'root' || idx === 0) ? '总目标' : (n?.label || '新节点'),
+            goalLayer: (n?.id === 'root' || idx === 0) ? '总目标' : ((n?.goalLayer as GoalLayer) || '周目标'),
           })),
         )
       }
@@ -328,8 +330,9 @@ function App() {
   useEffect(() => {
     const current = planTreeNodes.find((n) => n.id === selectedTreeNodeId)
     if (current) {
-      setTreeNodeLabelInput(current.label)
-      setTreeNodeLayerInput(current.goalLayer)
+      setTreeNodeLabelInput(current.id === 'root' ? '总目标' : current.label)
+      setTreeNodeLayerInput(current.id === 'root' ? '总目标' : current.goalLayer)
+      setTreeNodeQuadrantInput(current.quadrant || '')
     }
   }, [selectedTreeNodeId, planTreeNodes])
 
@@ -949,16 +952,41 @@ function App() {
     setPlanTreeNodes((prev) => prev.map((n) => (n.id === selectedTreeNodeId ? { ...n, goalLayer: n.id === 'root' ? '总目标' : layer } : n)))
   }
 
+  const syncTreeNodeToQuadrant = (nodeId: string, target: '' | QuadrantKey) => {
+    const node = planTreeNodes.find((n) => n.id === nodeId)
+    if (!node || node.id === 'root') return
+    pushUndoSnapshot()
+
+    setPlanTreeNodes((prev) => prev.map((n) => (n.id === nodeId ? { ...n, quadrant: target || undefined } : n)))
+
+    if (!target) {
+      setQuadrantItems((prev) => prev.filter((q) => q.sourceNodeId !== nodeId))
+      return
+    }
+
+    setQuadrantItems((prev) => {
+      const existing = prev.find((q) => q.sourceNodeId === nodeId)
+      if (existing) {
+        return prev.map((q) => (q.sourceNodeId === nodeId ? { ...q, quadrant: target, text: node.label } : q))
+      }
+      return [{ id: uuid(), text: node.label, quadrant: target, createdAt: Date.now(), sourceNodeId: nodeId }, ...prev]
+    })
+  }
+
   const renameTreeNode = () => {
     if (!selectedTreeNodeId || !treeNodeLabelInput.trim()) return
+    const nextLabel = selectedTreeNodeId === 'root' ? '总目标' : treeNodeLabelInput.trim()
     pushUndoSnapshot()
     setPlanTreeNodes((prev) =>
       prev.map((n) =>
         n.id === selectedTreeNodeId
-          ? { ...n, label: treeNodeLabelInput.trim(), goalLayer: n.id === 'root' ? '总目标' : treeNodeLayerInput }
+          ? { ...n, label: nextLabel, goalLayer: n.id === 'root' ? '总目标' : treeNodeLayerInput }
           : n,
       ),
     )
+    if (selectedTreeNodeId !== 'root') {
+      setQuadrantItems((prev) => prev.map((q) => (q.sourceNodeId === selectedTreeNodeId ? { ...q, text: nextLabel } : q)))
+    }
   }
 
   const flow = useMemo(() => {
@@ -1119,7 +1147,22 @@ function App() {
                   <option value="月目标">月目标</option>
                   <option value="周目标">周目标</option>
                 </select>
-                <input value={treeNodeLabelInput} onChange={(e) => setTreeNodeLabelInput(e.target.value)} placeholder="节点名称" />
+                <select
+                  value={treeNodeQuadrantInput}
+                  onChange={(e) => {
+                    const v = e.target.value as '' | QuadrantKey
+                    setTreeNodeQuadrantInput(v)
+                    syncTreeNodeToQuadrant(selectedTreeNodeId, v)
+                  }}
+                  disabled={selectedTreeNodeId === 'root'}
+                >
+                  <option value="">不入象限</option>
+                  <option value="important_urgent">🚨 重要且紧急</option>
+                  <option value="important_not_urgent">🎯 重要不紧急</option>
+                  <option value="not_important_urgent">⏱️ 不重要但紧急</option>
+                  <option value="not_important_not_urgent">🧹 不重要不紧急</option>
+                </select>
+                <input value={treeNodeLabelInput} onChange={(e) => setTreeNodeLabelInput(e.target.value)} placeholder="节点名称" disabled={selectedTreeNodeId === 'root'} />
                 <button onClick={renameTreeNode}>重命名</button>
                 <button onClick={() => addTreeChild('left')}>+左子</button>
                 <button onClick={() => addTreeChild('right')}>+右子</button>
