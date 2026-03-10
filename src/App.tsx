@@ -831,29 +831,57 @@ function App() {
       return
     }
 
-    const rows: Array<Record<string, string | number>> = []
-    selectedWeek.days.forEach((d) => {
+    const weekday = ['日', '一', '二', '三', '四', '五', '六']
+    const dayBlocks = selectedWeek.days.map((d) => {
       const date = selectedWeekDates[d.day - 1]
-      const key = dateKey(date)
-      const dayDiaries = diariesByDate[key] || []
-      ;(['上午', '下午', '晚上'] as Slot[]).forEach((s) => {
-        const slotTasks = d.tasks.filter((t) => t.slot === s)
-        rows.push({
-          日期: `${date.getMonth() + 1}/${date.getDate()}`,
-          星期: ['日', '一', '二', '三', '四', '五', '六'][date.getDay()],
-          时段: s,
-          任务数: slotTasks.length,
-          任务详情: slotTasks.map((t) => `${t.done ? '✅' : t.failed ? '❌' : '□'} ${t.text}`).join('\n'),
-          日记标题: dayDiaries.map((x) => x.title).join(' | '),
-          日记内容: dayDiaries.map((x) => x.content).join('\n---\n'),
-        })
-      })
+      return {
+        title: `${date.getMonth() + 1}/${date.getDate()}(周${weekday[date.getDay()]})`,
+        tasks: d.tasks,
+      }
     })
 
-    const ws = XLSX.utils.json_to_sheet(rows)
+    const maxTasks = Math.max(1, ...dayBlocks.map((x) => x.tasks.length))
+    const aoa: any[][] = []
+
+    // 第1行：每天标题（跨两列）
+    const headerRow: string[] = []
+    dayBlocks.forEach((d) => {
+      headerRow.push(d.title, '')
+    })
+    aoa.push(headerRow)
+
+    // 第2行：每一天的列名
+    const subHeaderRow: string[] = []
+    dayBlocks.forEach(() => {
+      subHeaderRow.push('To Do', '状态')
+    })
+    aoa.push(subHeaderRow)
+
+    // 任务行：每个 todo 一行，右侧状态列 ✅/❌/空
+    for (let i = 0; i < maxTasks; i++) {
+      const row: string[] = []
+      dayBlocks.forEach((d) => {
+        const t = d.tasks[i]
+        row.push(t ? `${t.slot}｜${t.text}` : '')
+        row.push(t ? (t.done ? '✅' : t.failed ? '❌' : '') : '')
+      })
+      aoa.push(row)
+    }
+
+    const ws = XLSX.utils.aoa_to_sheet(aoa)
+
+    // 合并第1行每天的两列标题
+    ws['!merges'] = dayBlocks.map((_, i) => ({
+      s: { r: 0, c: i * 2 },
+      e: { r: 0, c: i * 2 + 1 },
+    }))
+
+    // 设置列宽（每一天两列）
+    ws['!cols'] = dayBlocks.flatMap(() => [{ wch: 24 }, { wch: 8 }])
+
     const wb = XLSX.utils.book_new()
-    XLSX.utils.book_append_sheet(wb, ws, '周计划周记')
-    XLSX.writeFile(wb, `plan-diary-${selectedWeek.title}-${dateKey(new Date())}.xlsx`)
+    XLSX.utils.book_append_sheet(wb, ws, '周计划')
+    XLSX.writeFile(wb, `plan-week-${selectedWeek.title}-${dateKey(new Date())}.xlsx`)
   }
 
   const weekDayNumberByDateKey = useMemo(() => {
