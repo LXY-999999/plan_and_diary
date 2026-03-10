@@ -135,6 +135,7 @@ function App() {
   const [appliedDiarySearch, setAppliedDiarySearch] = useState({ year: '', month: '', day: '' })
   const [bulkModeWeekId, setBulkModeWeekId] = useState<string | null>(null)
   const [bulkSelected, setBulkSelected] = useState<Record<string, boolean>>({})
+  const [draggingWeekTask, setDraggingWeekTask] = useState<{ day: number; taskId: string } | null>(null)
   const [undoStack, setUndoStack] = useState<Array<{ weekGoals: WeekGoal[]; diariesByDate: DiariesByDate; quadrantItems: QuadrantItem[]; planTreeNodes: PlanTreeNode[]; selectedWeekId: string }>>([])
   const [editingDiaryKey, setEditingDiaryKey] = useState<string | null>(null)
   const [editingDiaryId, setEditingDiaryId] = useState<string | null>(null)
@@ -650,6 +651,37 @@ function App() {
   const cancelBulk = () => {
     setBulkSelected({})
     setBulkModeWeekId(null)
+  }
+
+  const moveWeekTask = (sourceDay: number, taskId: string, targetDay: number, targetSlot: Slot) => {
+    if (!selectedWeek) return
+    if (sourceDay === targetDay) {
+      const sourceTask = selectedWeek.days.find((d) => d.day === sourceDay)?.tasks.find((t) => t.id === taskId)
+      if (sourceTask?.slot === targetSlot) return
+    }
+    pushUndoSnapshot()
+    setWeekGoals((prev) =>
+      prev.map((w) => {
+        if (w.id !== selectedWeek.id) return w
+        let moved: DayTask | null = null
+        const daysWithout = w.days.map((d) => {
+          if (d.day !== sourceDay) return d
+          const left = d.tasks.filter((t) => {
+            if (t.id === taskId) {
+              moved = { ...t, slot: targetSlot }
+              return false
+            }
+            return true
+          })
+          return { ...d, tasks: left }
+        })
+        if (!moved) return w
+        return {
+          ...w,
+          days: daysWithout.map((d) => (d.day === targetDay ? { ...d, tasks: [...d.tasks, moved!] } : d)),
+        }
+      }),
+    )
   }
 
   const toggleTaskSelecting = (weekId: string, dayNum: number, taskId: string) => {
@@ -1216,10 +1248,25 @@ function App() {
                         <div key={d.day} className="day-card">
                           <h3>{actual.getMonth() + 1}月{actual.getDate()}日</h3>
                           {(['上午', '下午', '晚上'] as Slot[]).map((s) => (
-                            <div key={s}>
+                            <div
+                              key={s}
+                              onDragOver={(e) => e.preventDefault()}
+                              onDrop={() => {
+                                if (draggingWeekTask) {
+                                  moveWeekTask(draggingWeekTask.day, draggingWeekTask.taskId, d.day, s)
+                                  setDraggingWeekTask(null)
+                                }
+                              }}
+                            >
                               <h4>{s}</h4>
                               {d.tasks.filter((t) => t.slot === s).map((t) => (
-                                <div className={`task ${t.done ? 'done' : ''} ${t.failed ? 'failed' : ''}`} key={t.id}>
+                                <div
+                                  className={`task ${t.done ? 'done' : ''} ${t.failed ? 'failed' : ''}`}
+                                  key={t.id}
+                                  draggable={bulkModeWeekId !== selectedWeek.id}
+                                  onDragStart={() => setDraggingWeekTask({ day: d.day, taskId: t.id })}
+                                  onDragEnd={() => setDraggingWeekTask(null)}
+                                >
                                   <span>{t.text}</span>
                                   <div className="task-status">
                                     {bulkModeWeekId === selectedWeek.id ? (
