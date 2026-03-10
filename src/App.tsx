@@ -30,9 +30,13 @@ type PersistedState = {
   selectedWeekId: string
   openAIKey: string
   diariesByDate: DiariesByDate
+  username: string
 }
 
+type UserArchive = Record<string, Record<string, PersistedState>>
+
 const STORAGE_KEY = 'plan_and_diary_v1'
+const USER_ARCHIVE_KEY = 'plan_and_diary_user_archives_v1'
 
 const emptyDays = (): DayPlan[] => Array.from({ length: 7 }, (_, i) => ({ day: i + 1, tasks: [] }))
 const uuid = () => Math.random().toString(36).slice(2, 10)
@@ -57,6 +61,7 @@ const buildWeekDates = (startDateKey: string) => {
 
 function App() {
   const [theme, setTheme] = useState<Theme>('genki')
+  const [username, setUsername] = useState('default')
   const [goalType, setGoalType] = useState<GoalType>('月目标')
   const [rootGoal, setRootGoal] = useState('')
   const [weekGoals, setWeekGoals] = useState<WeekGoal[]>([])
@@ -140,15 +145,37 @@ function App() {
       if (typeof data.selectedWeekId === 'string') setSelectedWeekId(data.selectedWeekId)
       if (typeof data.openAIKey === 'string') setOpenAIKey(data.openAIKey)
       if (data.diariesByDate && typeof data.diariesByDate === 'object') setDiariesByDate(data.diariesByDate)
+      if (typeof data.username === 'string' && data.username.trim()) setUsername(data.username)
     } catch (e) {
       console.warn('读取本地数据失败，已忽略。', e)
     }
   }, [])
 
   useEffect(() => {
-    const payload: PersistedState = { theme, goalType, rootGoal, weekGoals, selectedWeekId, openAIKey, diariesByDate }
+    const payload: PersistedState = {
+      theme,
+      goalType,
+      rootGoal,
+      weekGoals,
+      selectedWeekId,
+      openAIKey,
+      diariesByDate,
+      username,
+    }
     localStorage.setItem(STORAGE_KEY, JSON.stringify(payload))
-  }, [theme, goalType, rootGoal, weekGoals, selectedWeekId, openAIKey, diariesByDate])
+
+    try {
+      const userKey = (username || 'default').trim() || 'default'
+      const dayKey = dateKey(normalizeDate(new Date()))
+      const rawArchive = localStorage.getItem(USER_ARCHIVE_KEY)
+      const archive: UserArchive = rawArchive ? JSON.parse(rawArchive) : {}
+      const userFolder = archive[userKey] || {}
+      archive[userKey] = { ...userFolder, [dayKey]: payload }
+      localStorage.setItem(USER_ARCHIVE_KEY, JSON.stringify(archive))
+    } catch (e) {
+      console.warn('用户每日自动归档失败，已忽略。', e)
+    }
+  }, [theme, goalType, rootGoal, weekGoals, selectedWeekId, openAIKey, diariesByDate, username])
 
   useEffect(() => {
     setBulkModeWeekId(null)
@@ -440,6 +467,7 @@ function App() {
     if (!confirm('确认清空所有本地计划数据吗？')) return
     localStorage.removeItem(STORAGE_KEY)
     setTheme('genki')
+    setUsername('default')
     setGoalType('月目标')
     setRootGoal('')
     setWeekGoals([])
@@ -529,6 +557,9 @@ function App() {
                 <option value="月目标">月目标</option>
               </select>
               <input value={rootGoal} onChange={(e) => setRootGoal(e.target.value)} placeholder="输入你的目标" />
+            </div>
+            <div className="row">
+              <input value={username} onChange={(e) => setUsername(e.target.value)} placeholder="用户名（用于自动分文件夹归档）" />
             </div>
           </section>
 
