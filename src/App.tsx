@@ -21,6 +21,8 @@ type GoalType = '年目标' | '月目标'
 type Page = 'plan' | 'diary'
 type TodoView = 'week' | 'month'
 type DiariesByDate = Record<string, DiaryEntry[]>
+type QuadrantKey = 'important_urgent' | 'important_not_urgent' | 'not_important_urgent' | 'not_important_not_urgent'
+type QuadrantItem = { id: string; text: string; quadrant: QuadrantKey; createdAt: number }
 
 type PersistedState = {
   theme: Theme
@@ -31,6 +33,7 @@ type PersistedState = {
   openAIKey: string
   diariesByDate: DiariesByDate
   username: string
+  quadrantItems: QuadrantItem[]
 }
 
 type UserArchive = Record<string, Record<string, PersistedState>>
@@ -80,6 +83,12 @@ function App() {
   const [username, setUsername] = useState('default')
   const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle')
   const [lastSavedAt, setLastSavedAt] = useState<number | null>(null)
+  const [quadrantItems, setQuadrantItems] = useState<QuadrantItem[]>([])
+  const [quadrantInput, setQuadrantInput] = useState('')
+  const [quadrantType, setQuadrantType] = useState<QuadrantKey>('important_urgent')
+  const [quadrantSelectedIds, setQuadrantSelectedIds] = useState<Record<string, boolean>>({})
+  const [assignDays, setAssignDays] = useState<number[]>([])
+  const [assignSlot, setAssignSlot] = useState<Slot>('上午')
   const [goalType, setGoalType] = useState<GoalType>('月目标')
   const [rootGoal, setRootGoal] = useState('')
   const [weekGoals, setWeekGoals] = useState<WeekGoal[]>([])
@@ -164,6 +173,7 @@ function App() {
       if (typeof data.openAIKey === 'string') setOpenAIKey(data.openAIKey)
       if (data.diariesByDate && typeof data.diariesByDate === 'object') setDiariesByDate(data.diariesByDate)
       if (typeof data.username === 'string' && data.username.trim()) setUsername(data.username)
+      if (Array.isArray(data.quadrantItems)) setQuadrantItems(data.quadrantItems)
     } catch (e) {
       console.warn('读取本地数据失败，已忽略。', e)
     }
@@ -179,6 +189,7 @@ function App() {
       openAIKey,
       diariesByDate,
       username,
+      quadrantItems,
     }
 
     setSaveStatus('saving')
@@ -203,7 +214,7 @@ function App() {
     }, 400)
 
     return () => window.clearTimeout(timer)
-  }, [theme, goalType, rootGoal, weekGoals, selectedWeekId, openAIKey, diariesByDate, username])
+  }, [theme, goalType, rootGoal, weekGoals, selectedWeekId, openAIKey, diariesByDate, username, quadrantItems])
 
   useEffect(() => {
     const saveNow = () => {
@@ -218,6 +229,7 @@ function App() {
           openAIKey,
           diariesByDate,
           username,
+          quadrantItems,
         }
         localStorage.setItem(STORAGE_KEY, JSON.stringify(payload))
 
@@ -246,7 +258,7 @@ function App() {
       document.removeEventListener('visibilitychange', onHiddenSave)
       window.removeEventListener('beforeunload', saveNow)
     }
-  }, [theme, goalType, rootGoal, weekGoals, selectedWeekId, openAIKey, diariesByDate, username])
+  }, [theme, goalType, rootGoal, weekGoals, selectedWeekId, openAIKey, diariesByDate, username, quadrantItems])
 
   useEffect(() => {
     setBulkModeWeekId(null)
@@ -279,6 +291,58 @@ function App() {
       }),
     )
     setTaskInput('')
+  }
+
+  const addQuadrantItem = () => {
+    if (!quadrantInput.trim()) return
+    setQuadrantItems((prev) => [
+      { id: uuid(), text: quadrantInput.trim(), quadrant: quadrantType, createdAt: Date.now() },
+      ...prev,
+    ])
+    setQuadrantInput('')
+  }
+
+  const toggleQuadrantSelected = (id: string) => {
+    setQuadrantSelectedIds((prev) => ({ ...prev, [id]: !prev[id] }))
+  }
+
+  const toggleAssignDay = (dayNum: number) => {
+    setAssignDays((prev) => (prev.includes(dayNum) ? prev.filter((x) => x !== dayNum) : [...prev, dayNum].sort((a, b) => a - b)))
+  }
+
+  const addQuadrantToWeekPlan = () => {
+    if (!selectedWeek) {
+      alert('请先选择周目标')
+      return
+    }
+    const picked = quadrantItems.filter((x) => quadrantSelectedIds[x.id])
+    if (!picked.length) {
+      alert('请先在四象限中选择至少一条计划')
+      return
+    }
+    if (!assignDays.length) {
+      alert('请至少选择一个日期')
+      return
+    }
+
+    setWeekGoals((prev) =>
+      prev.map((w) => {
+        if (w.id !== selectedWeek.id) return w
+        return {
+          ...w,
+          days: w.days.map((d) => {
+            if (!assignDays.includes(d.day)) return d
+            const additions: DayTask[] = picked.map((item) => ({
+              id: uuid(),
+              text: `[四象限] ${item.text}`,
+              slot: assignSlot,
+            }))
+            return { ...d, tasks: [...d.tasks, ...additions] }
+          }),
+        }
+      }),
+    )
+    setQuadrantSelectedIds({})
   }
 
   const filesToDataUrls = async (files: FileList | null) => {
@@ -547,6 +611,9 @@ function App() {
     setTaskInput('')
     setOpenAIKey('')
     setAutoPrompt('')
+    setQuadrantItems([])
+    setQuadrantSelectedIds({})
+    setAssignDays([])
     setPage('plan')
     setDiariesByDate({})
     setDiaryDay(1)
@@ -588,6 +655,22 @@ function App() {
 
     return filtered.sort((a, b) => b.entry.createdAt - a.entry.createdAt)
   }, [diariesByDate, appliedDiarySearch])
+
+  const quadrantLabel: Record<QuadrantKey, string> = {
+    important_urgent: '重要且紧急',
+    important_not_urgent: '重要不紧急',
+    not_important_urgent: '不重要但紧急',
+    not_important_not_urgent: '不重要不紧急',
+  }
+
+  const groupedQuadrants = useMemo(() => {
+    return {
+      important_urgent: quadrantItems.filter((x) => x.quadrant === 'important_urgent'),
+      important_not_urgent: quadrantItems.filter((x) => x.quadrant === 'important_not_urgent'),
+      not_important_urgent: quadrantItems.filter((x) => x.quadrant === 'not_important_urgent'),
+      not_important_not_urgent: quadrantItems.filter((x) => x.quadrant === 'not_important_not_urgent'),
+    }
+  }, [quadrantItems])
 
   const saveHint = useMemo(() => {
     if (saveStatus === 'saving') return '💾 保存中...'
@@ -684,6 +767,65 @@ function App() {
               <textarea value={autoPrompt} onChange={(e) => setAutoPrompt(e.target.value)} placeholder="可选：自定义拆解提示词" rows={3} />
               <button onClick={autoGenerateWeek} disabled={loadingAI}>{loadingAI ? '生成中...' : '自动生成7天早中晚'}</button>
             </details>
+          </section>
+
+          <section className="panel">
+            <h2>4) 计划四象限（艾森豪威尔）</h2>
+            <div className="row">
+              <select value={quadrantType} onChange={(e) => setQuadrantType(e.target.value as QuadrantKey)}>
+                <option value="important_urgent">重要且紧急</option>
+                <option value="important_not_urgent">重要不紧急</option>
+                <option value="not_important_urgent">不重要但紧急</option>
+                <option value="not_important_not_urgent">不重要不紧急</option>
+              </select>
+              <input value={quadrantInput} onChange={(e) => setQuadrantInput(e.target.value)} placeholder="输入四象限计划" />
+              <button onClick={addQuadrantItem}>添加到象限</button>
+            </div>
+
+            <div className="month-grid" style={{ marginTop: 8 }}>
+              {(Object.keys(groupedQuadrants) as QuadrantKey[]).map((key) => (
+                <div key={key} className="month-cell">
+                  <h4>{quadrantLabel[key]}</h4>
+                  {(groupedQuadrants[key] || []).length === 0 ? (
+                    <small className="muted">暂无</small>
+                  ) : (
+                    (groupedQuadrants[key] || []).map((item) => (
+                      <label key={item.id} className="mini-task" style={{ display: 'block', whiteSpace: 'normal' }}>
+                        <input
+                          type="checkbox"
+                          checked={!!quadrantSelectedIds[item.id]}
+                          onChange={() => toggleQuadrantSelected(item.id)}
+                          style={{ width: 16, marginRight: 6 }}
+                        />
+                        {item.text}
+                      </label>
+                    ))
+                  )}
+                </div>
+              ))}
+            </div>
+
+            <div className="row" style={{ marginTop: 8 }}>
+              <span className="muted">选择日期（可多选）:</span>
+              {selectedWeekDates.map((d, i) => (
+                <button
+                  key={`assign-${i + 1}`}
+                  className={assignDays.includes(i + 1) ? 'chip active' : 'chip'}
+                  onClick={() => toggleAssignDay(i + 1)}
+                >
+                  {d.getMonth() + 1}/{d.getDate()}
+                </button>
+              ))}
+            </div>
+
+            <div className="row" style={{ marginTop: 8 }}>
+              <select value={assignSlot} onChange={(e) => setAssignSlot(e.target.value as Slot)}>
+                <option>上午</option>
+                <option>下午</option>
+                <option>晚上</option>
+              </select>
+              <button onClick={addQuadrantToWeekPlan}>添加到周计划（自动联动月视图）</button>
+            </div>
           </section>
 
           <section className="panel flow-wrap">
