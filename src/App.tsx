@@ -229,7 +229,7 @@ function App() {
         setPlanTreeNodes(
           data.planTreeNodes.map((n: any, idx: number) => ({
             ...n,
-            label: (n?.id === 'root' || idx === 0) ? '总目标' : (n?.label || '新节点'),
+            label: n?.label || (n?.id === 'root' || idx === 0 ? '总目标' : '新节点'),
             goalLayer: (n?.id === 'root' || idx === 0) ? '总目标' : ((n?.goalLayer as GoalLayer) || '周目标'),
           })),
         )
@@ -330,7 +330,7 @@ function App() {
   useEffect(() => {
     const current = planTreeNodes.find((n) => n.id === selectedTreeNodeId)
     if (current) {
-      setTreeNodeLabelInput(current.id === 'root' ? '总目标' : current.label)
+      setTreeNodeLabelInput(current.label)
       setTreeNodeLayerInput(current.id === 'root' ? '总目标' : current.goalLayer)
       setTreeNodeQuadrantInput(current.quadrant || '')
     }
@@ -975,7 +975,7 @@ function App() {
 
   const renameTreeNode = () => {
     if (!selectedTreeNodeId || !treeNodeLabelInput.trim()) return
-    const nextLabel = selectedTreeNodeId === 'root' ? '总目标' : treeNodeLabelInput.trim()
+    const nextLabel = treeNodeLabelInput.trim()
     pushUndoSnapshot()
     setPlanTreeNodes((prev) =>
       prev.map((n) =>
@@ -990,7 +990,7 @@ function App() {
   }
 
   const renameTreeNodeById = (nodeId: string) => {
-    if (!nodeId || nodeId === 'root') return
+    if (!nodeId) return
     const current = planTreeNodes.find((n) => n.id === nodeId)
     if (!current) return
     const next = prompt('输入新的节点名称', current.label)?.trim()
@@ -1232,7 +1232,7 @@ function App() {
                   <option value="not_important_urgent">不重要但紧急</option>
                   <option value="not_important_not_urgent">不重要不紧急</option>
                 </select>
-                <input value={treeNodeLabelInput} onChange={(e) => setTreeNodeLabelInput(e.target.value)} placeholder="节点名称" disabled={selectedTreeNodeId === 'root'} />
+                <input value={treeNodeLabelInput} onChange={(e) => setTreeNodeLabelInput(e.target.value)} placeholder="节点名称" />
                 <button onClick={renameTreeNode}>重命名</button>
                 <button onClick={() => addTreeChild('left')}>+左子</button>
                 <button onClick={() => addTreeChild('right')}>+右子</button>
