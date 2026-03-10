@@ -13,6 +13,13 @@ h1 { margin:0; font-size: clamp(18px, 2.8vw, 24px); }
 details > summary { cursor: pointer; font-weight: 700; font-size: 14px; list-style: none; }
 .week-goal-toggle { width: 100%; text-align: left; }
 .week-goal-dropdown { margin-top: 8px; border:1px solid #e5e7eb; border-radius:10px; padding:8px; background: rgba(255,255,255,.7); }
+.compact-header-actions { display:flex; align-items:center; gap:8px; margin-left:auto; }
+.save-hint-mini { font-size:12px; opacity:.85; }
+.top-actions-menu { position: relative; }
+.top-actions-menu > summary { width:36px; height:36px; display:flex; align-items:center; justify-content:center; border-radius:10px; background: linear-gradient(135deg,#ff5a8a,#ff8f70); color:#fff; cursor:pointer; list-style:none; }
+.top-actions-menu > summary::-webkit-details-marker { display:none; }
+.top-actions-pop { position:absolute; right:0; top:42px; min-width:120px; display:flex; flex-direction:column; gap:6px; padding:8px; border:1px solid #e5e7eb; border-radius:10px; background:#fff; box-shadow:0 8px 18px rgba(0,0,0,.12); z-index:40; }
+.top-actions-pop button { width:100%; }
 details > summary::-webkit-details-marker { display: none; }
 input, select, textarea, button { border-radius:8px; border:1px solid #ddd; padding:8px 10px; font-size:14px; }
 input, select, textarea { background:#fff; }

@@ -995,12 +995,17 @@ function App() {
     <div className={`app ${theme}`}>
       <header>
         <h1>🌈 Plan & Diary</h1>
-        <div className="theme-switch">
-          <span style={{ marginRight: 8, fontSize: 12, opacity: 0.85 }}>{saveHint}</span>
+        <div className="theme-switch compact-header-actions">
+          <span className="save-hint-mini">{saveHint}</span>
           <button onClick={undoLastAction} disabled={undoStack.length === 0}>↶ 撤回</button>
-          <button onClick={() => setTheme('genki')}>元气</button>
-          <button onClick={() => setTheme('mint')}>薄荷</button>
-          <button onClick={page === 'plan' ? clearPlanData : clearDiaryData}>{page === 'plan' ? '清空计划' : '清空日记'}</button>
+          <details className="top-actions-menu">
+            <summary>⚙️</summary>
+            <div className="top-actions-pop">
+              <button onClick={() => setTheme('genki')}>元气</button>
+              <button onClick={() => setTheme('mint')}>薄荷</button>
+              <button onClick={page === 'plan' ? clearPlanData : clearDiaryData}>{page === 'plan' ? '清空计划' : '清空日记'}</button>
+            </div>
+          </details>
         </div>
       </header>
 
