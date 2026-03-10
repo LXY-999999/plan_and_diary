@@ -85,11 +85,15 @@ function App() {
   const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle')
   const [lastSavedAt, setLastSavedAt] = useState<number | null>(null)
   const [quadrantItems, setQuadrantItems] = useState<QuadrantItem[]>([])
-  const [quadrantInput, setQuadrantInput] = useState('')
-  const [quadrantType, setQuadrantType] = useState<QuadrantKey>('important_urgent')
-  const [quadrantSelectedIds, setQuadrantSelectedIds] = useState<Record<string, boolean>>({})
-  const [assignDays, setAssignDays] = useState<number[]>([])
-  const [assignSlot, setAssignSlot] = useState<Slot>('上午')
+  const [quadrantQuickInput, setQuadrantQuickInput] = useState<Record<QuadrantKey, string>>({
+    important_urgent: '',
+    important_not_urgent: '',
+    not_important_urgent: '',
+    not_important_not_urgent: '',
+  })
+  const [taskScheduleOpenId, setTaskScheduleOpenId] = useState<string | null>(null)
+  const [taskScheduleDays, setTaskScheduleDays] = useState<number[]>([])
+  const [taskScheduleSlot, setTaskScheduleSlot] = useState<Slot>('上午')
   const [todayMarker, setTodayMarker] = useState(dateKey(normalizeDate(new Date())))
   const [goalType, setGoalType] = useState<GoalType>('月目标')
   const [rootGoal, setRootGoal] = useState('')
@@ -162,9 +166,9 @@ function App() {
       setDiaryVideos([])
       setDiaryLocation('')
       setDiaryExpanded(false)
-      setQuadrantSelectedIds({})
-      setAssignDays([])
-      setAssignSlot('上午')
+      setTaskScheduleOpenId(null)
+      setTaskScheduleDays([])
+      setTaskScheduleSlot('上午')
 
       localStorage.setItem(DAILY_RESET_KEY, todayMarker)
     } catch (e) {
@@ -331,56 +335,46 @@ function App() {
     setTaskInput('')
   }
 
-  const addQuadrantItem = () => {
-    if (!quadrantInput.trim()) return
-    setQuadrantItems((prev) => [
-      { id: uuid(), text: quadrantInput.trim(), quadrant: quadrantType, createdAt: Date.now() },
-      ...prev,
-    ])
-    setQuadrantInput('')
+  const addQuadrantItemInCell = (quadrant: QuadrantKey) => {
+    const text = (quadrantQuickInput[quadrant] || '').trim()
+    if (!text) return
+    setQuadrantItems((prev) => [{ id: uuid(), text, quadrant, createdAt: Date.now() }, ...prev])
+    setQuadrantQuickInput((prev) => ({ ...prev, [quadrant]: '' }))
   }
 
-  const toggleQuadrantSelected = (id: string) => {
-    setQuadrantSelectedIds((prev) => ({ ...prev, [id]: !prev[id] }))
+  const openTaskSchedule = (itemId: string) => {
+    setTaskScheduleOpenId(itemId)
+    setTaskScheduleDays([])
+    setTaskScheduleSlot('上午')
   }
 
-  const toggleAssignDay = (dayNum: number) => {
-    setAssignDays((prev) => (prev.includes(dayNum) ? prev.filter((x) => x !== dayNum) : [...prev, dayNum].sort((a, b) => a - b)))
+  const toggleTaskScheduleDay = (dayNum: number) => {
+    setTaskScheduleDays((prev) => (prev.includes(dayNum) ? prev.filter((x) => x !== dayNum) : [...prev, dayNum].sort((a, b) => a - b)))
   }
 
-  const addQuadrantToWeekPlan = () => {
+  const applyTaskScheduleToWeek = (item: QuadrantItem) => {
     if (!selectedWeek) {
       alert('请先选择周目标')
       return
     }
-    const picked = quadrantItems.filter((x) => quadrantSelectedIds[x.id])
-    if (!picked.length) {
-      alert('请先在四象限中选择至少一条计划')
-      return
-    }
-    if (!assignDays.length) {
+    if (!taskScheduleDays.length) {
       alert('请至少选择一个日期')
       return
     }
-
     setWeekGoals((prev) =>
       prev.map((w) => {
         if (w.id !== selectedWeek.id) return w
         return {
           ...w,
           days: w.days.map((d) => {
-            if (!assignDays.includes(d.day)) return d
-            const additions: DayTask[] = picked.map((item) => ({
-              id: uuid(),
-              text: `[四象限] ${item.text}`,
-              slot: assignSlot,
-            }))
-            return { ...d, tasks: [...d.tasks, ...additions] }
+            if (!taskScheduleDays.includes(d.day)) return d
+            return { ...d, tasks: [...d.tasks, { id: uuid(), text: `[四象限] ${item.text}`, slot: taskScheduleSlot }] }
           }),
         }
       }),
     )
-    setQuadrantSelectedIds({})
+    setTaskScheduleOpenId(null)
+    setTaskScheduleDays([])
   }
 
   const filesToDataUrls = async (files: FileList | null) => {
@@ -650,8 +644,8 @@ function App() {
     setOpenAIKey('')
     setAutoPrompt('')
     setQuadrantItems([])
-    setQuadrantSelectedIds({})
-    setAssignDays([])
+    setTaskScheduleOpenId(null)
+    setTaskScheduleDays([])
     setPage('plan')
     setDiariesByDate({})
     setDiaryDay(1)
@@ -801,17 +795,6 @@ function App() {
           <section className="panel">
             <details>
               <summary>3) 计划四象限（艾森豪威尔）</summary>
-              <div className="row" style={{ marginTop: 8 }}>
-                <select value={quadrantType} onChange={(e) => setQuadrantType(e.target.value as QuadrantKey)}>
-                  <option value="important_urgent">重要且紧急</option>
-                  <option value="important_not_urgent">重要不紧急</option>
-                  <option value="not_important_urgent">不重要但紧急</option>
-                  <option value="not_important_not_urgent">不重要不紧急</option>
-                </select>
-                <input value={quadrantInput} onChange={(e) => setQuadrantInput(e.target.value)} placeholder="输入四象限计划" />
-                <button onClick={addQuadrantItem}>添加到象限</button>
-              </div>
-
               <div className="matrix-wrap" style={{ marginTop: 8 }}>
                 <div className="matrix-y-axis">重要性 ↑</div>
                 <div className="matrix-grid">
@@ -823,19 +806,49 @@ function App() {
                   ] as QuadrantKey[]).map((key) => (
                     <div key={key} className="matrix-cell">
                       <h4>{quadrantLabel[key]}</h4>
+                      <div className="row" style={{ marginBottom: 6 }}>
+                        <input
+                          value={quadrantQuickInput[key]}
+                          onChange={(e) => setQuadrantQuickInput((prev) => ({ ...prev, [key]: e.target.value }))}
+                          placeholder="输入任务"
+                        />
+                        <button onClick={() => addQuadrantItemInCell(key)}>＋</button>
+                      </div>
+
                       {(groupedQuadrants[key] || []).length === 0 ? (
                         <small className="muted">暂无</small>
                       ) : (
                         (groupedQuadrants[key] || []).map((item) => (
-                          <label key={item.id} className="mini-task" style={{ display: 'block', whiteSpace: 'normal' }}>
-                            <input
-                              type="checkbox"
-                              checked={!!quadrantSelectedIds[item.id]}
-                              onChange={() => toggleQuadrantSelected(item.id)}
-                              style={{ width: 16, marginRight: 6 }}
-                            />
-                            {item.text}
-                          </label>
+                          <div key={item.id} className="mini-task" style={{ display: 'block', whiteSpace: 'normal', marginTop: 6 }}>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', gap: 6, alignItems: 'center' }}>
+                              <span>{item.text}</span>
+                              <button className="chip" onClick={() => openTaskSchedule(item.id)}>安排</button>
+                            </div>
+
+                            {taskScheduleOpenId === item.id && (
+                              <div style={{ marginTop: 6 }}>
+                                <div className="chips">
+                                  {selectedWeekDates.map((d, i) => (
+                                    <button
+                                      key={`q-day-${item.id}-${i + 1}`}
+                                      className={taskScheduleDays.includes(i + 1) ? 'chip active' : 'chip'}
+                                      onClick={() => toggleTaskScheduleDay(i + 1)}
+                                    >
+                                      {d.getMonth() + 1}/{d.getDate()}
+                                    </button>
+                                  ))}
+                                </div>
+                                <div className="row" style={{ marginTop: 6 }}>
+                                  <select value={taskScheduleSlot} onChange={(e) => setTaskScheduleSlot(e.target.value as Slot)}>
+                                    <option>上午</option>
+                                    <option>下午</option>
+                                    <option>晚上</option>
+                                  </select>
+                                  <button onClick={() => applyTaskScheduleToWeek(item)}>添加到周计划</button>
+                                </div>
+                              </div>
+                            )}
+                          </div>
                         ))
                       )}
                     </div>
@@ -844,27 +857,6 @@ function App() {
                 <div className="matrix-x-axis">紧急性 →</div>
               </div>
 
-              <div className="row" style={{ marginTop: 8 }}>
-                <span className="muted">选择日期（可多选）:</span>
-                {selectedWeekDates.map((d, i) => (
-                  <button
-                    key={`assign-${i + 1}`}
-                    className={assignDays.includes(i + 1) ? 'chip active' : 'chip'}
-                    onClick={() => toggleAssignDay(i + 1)}
-                  >
-                    {d.getMonth() + 1}/{d.getDate()}
-                  </button>
-                ))}
-              </div>
-
-              <div className="row" style={{ marginTop: 8 }}>
-                <select value={assignSlot} onChange={(e) => setAssignSlot(e.target.value as Slot)}>
-                  <option>上午</option>
-                  <option>下午</option>
-                  <option>晚上</option>
-                </select>
-                <button onClick={addQuadrantToWeekPlan}>添加到周计划（自动联动月视图）</button>
-              </div>
             </details>
           </section>
 
