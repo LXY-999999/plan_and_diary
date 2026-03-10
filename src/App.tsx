@@ -91,6 +91,12 @@ function App() {
     not_important_urgent: '',
     not_important_not_urgent: '',
   })
+  const [quadrantComposerOpen, setQuadrantComposerOpen] = useState<Record<QuadrantKey, boolean>>({
+    important_urgent: false,
+    important_not_urgent: false,
+    not_important_urgent: false,
+    not_important_not_urgent: false,
+  })
   const [taskScheduleOpenId, setTaskScheduleOpenId] = useState<string | null>(null)
   const [taskScheduleDays, setTaskScheduleDays] = useState<number[]>([])
   const [taskScheduleSlot, setTaskScheduleSlot] = useState<Slot>('上午')
@@ -402,6 +408,10 @@ function App() {
     pushUndoSnapshot()
     setQuadrantItems((prev) => [{ id: uuid(), text, quadrant, createdAt: Date.now() }, ...prev])
     setQuadrantQuickInput((prev) => ({ ...prev, [quadrant]: '' }))
+  }
+
+  const toggleQuadrantComposer = (quadrant: QuadrantKey) => {
+    setQuadrantComposerOpen((prev) => ({ ...prev, [quadrant]: !prev[quadrant] }))
   }
 
   const openTaskSchedule = (itemId: string) => {
@@ -956,15 +966,22 @@ function App() {
                     'not_important_urgent',
                   ] as QuadrantKey[]).map((key) => (
                     <div key={key} className="matrix-cell">
-                      <h4>{quadrantLabel[key]}</h4>
-                      <div className="row" style={{ marginBottom: 6, alignItems: 'center' }}>
-                        <input
-                          value={quadrantQuickInput[key]}
-                          onChange={(e) => setQuadrantQuickInput((prev) => ({ ...prev, [key]: e.target.value }))}
-                          placeholder="输入任务"
-                        />
-                        <button className="add-box-btn" onClick={() => addQuadrantItemInCell(key)}>＋</button>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 6 }}>
+                        <h4 style={{ margin: 0 }}>{quadrantLabel[key]}</h4>
+                        <button className="schedule-box-btn" onClick={() => toggleQuadrantComposer(key)}>
+                          {quadrantComposerOpen[key] ? '▴' : '▾'}
+                        </button>
                       </div>
+                      {quadrantComposerOpen[key] && (
+                        <div className="row" style={{ margin: '6px 0', alignItems: 'center' }}>
+                          <input
+                            value={quadrantQuickInput[key]}
+                            onChange={(e) => setQuadrantQuickInput((prev) => ({ ...prev, [key]: e.target.value }))}
+                            placeholder="输入任务"
+                          />
+                          <button className="add-box-btn" onClick={() => addQuadrantItemInCell(key)}>＋</button>
+                        </div>
+                      )}
 
                       {(groupedQuadrants[key] || []).length === 0 ? (
                         <small className="muted">暂无</small>
