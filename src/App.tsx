@@ -1152,7 +1152,7 @@ function App() {
                             onDragEnd={onQuadrantItemDragEnd}
                           >
                             <div style={{ display: 'flex', justifyContent: 'space-between', gap: 6, alignItems: 'center' }}>
-                              <span>⋮⋮ {item.text}</span>
+                              <span>{item.text}</span>
                               <div style={{ display: 'flex', gap: 4, alignItems: 'center' }}>
                                 <button className="schedule-box-btn" onClick={() => openTaskSchedule(item.id)}>▾</button>
                                 <button className="schedule-box-btn" onClick={() => deleteQuadrantItem(item.id)}>✕</button>
