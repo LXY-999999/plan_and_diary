@@ -1037,7 +1037,33 @@ function App() {
 
       const count = Math.max(1, 2 ** cur.level)
       const offset = (cur.index - (count - 1) / 2) * 220
-      nodes.push({ id: node.id, data: { label: `${node.goalLayer}｜${node.label}` }, position: { x: offset + 380, y: 30 + cur.level * 110 } })
+      nodes.push({
+        id: node.id,
+        data: {
+          label: (
+            <div className="tree-node-card" onClick={() => setSelectedTreeNodeId(node.id)}>
+              <div>{`${node.goalLayer}｜${node.label}`}</div>
+              {node.id !== 'root' && (
+                <div style={{ display: 'flex', gap: 4, marginTop: 4 }}>
+                  <select
+                    className="mini-move-select"
+                    value={node.quadrant || ''}
+                    onChange={(e) => syncTreeNodeToQuadrant(node.id, e.target.value as '' | QuadrantKey)}
+                  >
+                    <option value="">不入象限</option>
+                    <option value="important_urgent">重要且紧急</option>
+                    <option value="important_not_urgent">重要不紧急</option>
+                    <option value="not_important_urgent">不重要但紧急</option>
+                    <option value="not_important_not_urgent">不重要不紧急</option>
+                  </select>
+                  <button className="schedule-box-btn" onClick={() => deleteTreeNode(node.id)}>✕</button>
+                </div>
+              )}
+            </div>
+          ),
+        },
+        position: { x: offset + 380, y: 30 + cur.level * 110 },
+      })
 
       if (node.leftId) {
         edges.push({ id: `e-${node.id}-${node.leftId}`, source: node.id, target: node.leftId })
@@ -1211,13 +1237,6 @@ function App() {
                   <Controls />
                   <MiniMap style={{ width: 90, height: 60 }} />
                 </ReactFlow>
-              </div>
-              <div className="row" style={{ marginTop: 6 }}>
-                <button onClick={() => syncTreeNodeToQuadrant(selectedTreeNodeId, 'important_urgent')} disabled={selectedTreeNodeId === 'root'}>同步到重要且紧急</button>
-                <button onClick={() => syncTreeNodeToQuadrant(selectedTreeNodeId, 'important_not_urgent')} disabled={selectedTreeNodeId === 'root'}>同步到重要不紧急</button>
-                <button onClick={() => syncTreeNodeToQuadrant(selectedTreeNodeId, 'not_important_urgent')} disabled={selectedTreeNodeId === 'root'}>同步到不重要但紧急</button>
-                <button onClick={() => syncTreeNodeToQuadrant(selectedTreeNodeId, 'not_important_not_urgent')} disabled={selectedTreeNodeId === 'root'}>同步到不重要不紧急</button>
-                <button onClick={() => deleteTreeNode(selectedTreeNodeId)} disabled={selectedTreeNodeId === 'root'}>删除节点</button>
               </div>
             </details>
           </section>
