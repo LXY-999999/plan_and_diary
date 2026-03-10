@@ -17,6 +17,7 @@ type DiaryEntry = {
 }
 type DayPlan = { day: number; tasks: DayTask[] }
 type WeekGoal = { id: string; title: string; days: DayPlan[]; startDate: string }
+type PlanTreeNode = { id: string; label: string; leftId?: string; rightId?: string }
 type Theme = 'genki' | 'mint'
 type GoalType = '年目标' | '月目标'
 type Page = 'plan' | 'diary'
@@ -35,6 +36,7 @@ type PersistedState = {
   diariesByDate: DiariesByDate
   username: string
   quadrantItems: QuadrantItem[]
+  planTreeNodes?: PlanTreeNode[]
 }
 
 type UserArchive = Record<string, Record<string, PersistedState>>
@@ -80,6 +82,8 @@ const buildWeekDates = (startDateKey: string) => {
   })
 }
 
+const defaultPlanTree = (): PlanTreeNode[] => [{ id: 'root', label: '本周总目标' }]
+
 function App() {
   const [theme, setTheme] = useState<Theme>('genki')
   const [username, setUsername] = useState('default')
@@ -106,6 +110,9 @@ function App() {
   const [goalType, setGoalType] = useState<GoalType>('月目标')
   const [rootGoal, setRootGoal] = useState('')
   const [weekGoals, setWeekGoals] = useState<WeekGoal[]>([])
+  const [planTreeNodes, setPlanTreeNodes] = useState<PlanTreeNode[]>(defaultPlanTree())
+  const [selectedTreeNodeId, setSelectedTreeNodeId] = useState('root')
+  const [treeNodeLabelInput, setTreeNodeLabelInput] = useState('')
 
   const [selectedWeekId, setSelectedWeekId] = useState<string>('')
   const selectedWeek = weekGoals.find((w) => w.id === selectedWeekId)
@@ -129,7 +136,7 @@ function App() {
   const [appliedDiarySearch, setAppliedDiarySearch] = useState({ year: '', month: '', day: '' })
   const [bulkModeWeekId, setBulkModeWeekId] = useState<string | null>(null)
   const [bulkSelected, setBulkSelected] = useState<Record<string, boolean>>({})
-  const [undoStack, setUndoStack] = useState<Array<{ weekGoals: WeekGoal[]; diariesByDate: DiariesByDate; quadrantItems: QuadrantItem[]; selectedWeekId: string }>>([])
+  const [undoStack, setUndoStack] = useState<Array<{ weekGoals: WeekGoal[]; diariesByDate: DiariesByDate; quadrantItems: QuadrantItem[]; planTreeNodes: PlanTreeNode[]; selectedWeekId: string }>>([])
   const [editingDiaryKey, setEditingDiaryKey] = useState<string | null>(null)
   const [editingDiaryId, setEditingDiaryId] = useState<string | null>(null)
   const [editingDiaryTitle, setEditingDiaryTitle] = useState('')
@@ -215,6 +222,7 @@ function App() {
       if (data.diariesByDate && typeof data.diariesByDate === 'object') setDiariesByDate(data.diariesByDate)
       if (typeof data.username === 'string' && data.username.trim()) setUsername(data.username)
       if (Array.isArray(data.quadrantItems)) setQuadrantItems(data.quadrantItems)
+      if (Array.isArray(data.planTreeNodes) && data.planTreeNodes.length) setPlanTreeNodes(data.planTreeNodes)
     } catch (e) {
       console.warn('读取本地数据失败，已忽略。', e)
     }
@@ -231,6 +239,7 @@ function App() {
       diariesByDate,
       username,
       quadrantItems,
+      planTreeNodes,
     }
 
     setSaveStatus('saving')
@@ -255,7 +264,7 @@ function App() {
     }, 400)
 
     return () => window.clearTimeout(timer)
-  }, [theme, goalType, rootGoal, weekGoals, selectedWeekId, openAIKey, diariesByDate, username, quadrantItems])
+  }, [theme, goalType, rootGoal, weekGoals, selectedWeekId, openAIKey, diariesByDate, username, quadrantItems, planTreeNodes])
 
   useEffect(() => {
     const saveNow = () => {
@@ -271,6 +280,7 @@ function App() {
           diariesByDate,
           username,
           quadrantItems,
+          planTreeNodes,
         }
         localStorage.setItem(STORAGE_KEY, JSON.stringify(payload))
 
@@ -299,12 +309,17 @@ function App() {
       document.removeEventListener('visibilitychange', onHiddenSave)
       window.removeEventListener('beforeunload', saveNow)
     }
-  }, [theme, goalType, rootGoal, weekGoals, selectedWeekId, openAIKey, diariesByDate, username, quadrantItems])
+  }, [theme, goalType, rootGoal, weekGoals, selectedWeekId, openAIKey, diariesByDate, username, quadrantItems, planTreeNodes])
 
   useEffect(() => {
     setBulkModeWeekId(null)
     setBulkSelected({})
   }, [selectedWeekId])
+
+  useEffect(() => {
+    const current = planTreeNodes.find((n) => n.id === selectedTreeNodeId)
+    if (current) setTreeNodeLabelInput(current.label)
+  }, [selectedTreeNodeId, planTreeNodes])
 
   useEffect(() => {
     setAppliedDiarySearch({ year: diarySearchYear, month: diarySearchMonth, day: diarySearchDay })
@@ -317,6 +332,7 @@ function App() {
         weekGoals: JSON.parse(JSON.stringify(weekGoals)),
         diariesByDate: JSON.parse(JSON.stringify(diariesByDate)),
         quadrantItems: JSON.parse(JSON.stringify(quadrantItems)),
+        planTreeNodes: JSON.parse(JSON.stringify(planTreeNodes)),
         selectedWeekId,
       },
     ])
@@ -329,6 +345,7 @@ function App() {
       setWeekGoals(last.weekGoals)
       setDiariesByDate(last.diariesByDate)
       setQuadrantItems(last.quadrantItems)
+      setPlanTreeNodes(last.planTreeNodes)
       setSelectedWeekId(last.selectedWeekId)
       return prev.slice(0, -1)
     })
@@ -671,6 +688,9 @@ function App() {
     setSelectedWeekId('')
     setOpenAIKey('')
     setQuadrantItems([])
+    setPlanTreeNodes(defaultPlanTree())
+    setSelectedTreeNodeId('root')
+    setTreeNodeLabelInput('本周总目标')
     setTaskScheduleOpenId(null)
     setTaskScheduleDays([])
     setTaskScheduleSlot('上午')
@@ -882,23 +902,60 @@ function App() {
     return '📝 待保存'
   }, [saveStatus, lastSavedAt])
 
+  const selectedTreeNode = planTreeNodes.find((n) => n.id === selectedTreeNodeId)
+
+  const addTreeChild = (side: 'left' | 'right') => {
+    if (!selectedTreeNode) return
+    if ((side === 'left' && selectedTreeNode.leftId) || (side === 'right' && selectedTreeNode.rightId)) {
+      alert('该方向已有子节点')
+      return
+    }
+    pushUndoSnapshot()
+    const newId = uuid()
+    setPlanTreeNodes((prev) =>
+      prev
+        .map((n) => (n.id === selectedTreeNode.id ? { ...n, ...(side === 'left' ? { leftId: newId } : { rightId: newId }) } : n))
+        .concat([{ id: newId, label: '新节点' }]),
+    )
+    setSelectedTreeNodeId(newId)
+    setTreeNodeLabelInput('新节点')
+  }
+
+  const renameTreeNode = () => {
+    if (!selectedTreeNodeId || !treeNodeLabelInput.trim()) return
+    pushUndoSnapshot()
+    setPlanTreeNodes((prev) => prev.map((n) => (n.id === selectedTreeNodeId ? { ...n, label: treeNodeLabelInput.trim() } : n)))
+  }
+
   const flow = useMemo(() => {
-    const nodes: Node[] = [{ id: 'root', data: { label: '周目标总览' }, position: { x: 260, y: 20 } }]
+    const nodeMap = new Map(planTreeNodes.map((n) => [n.id, n]))
+    if (!nodeMap.has('root')) return { nodes: [] as Node[], edges: [] as Edge[] }
+
+    const nodes: Node[] = []
     const edges: Edge[] = []
 
-    weekGoals.forEach((w, wi) => {
-      const wid = `w-${w.id}`
-      nodes.push({ id: wid, data: { label: `周目标: ${w.title}` }, position: { x: wi * 240 + 40, y: 130 } })
-      edges.push({ id: `e-root-${wid}`, source: 'root', target: wid })
-      w.days.forEach((d, di) => {
-        const did = `${wid}-d${d.day}`
-        nodes.push({ id: did, data: { label: `第${d.day}天` }, position: { x: wi * 240 + 40, y: 240 + di * 85 } })
-        edges.push({ id: `e-${wid}-${did}`, source: wid, target: did })
-      })
-    })
+    const queue: Array<{ id: string; level: number; index: number }> = [{ id: 'root', level: 0, index: 0 }]
+    while (queue.length) {
+      const cur = queue.shift()!
+      const node = nodeMap.get(cur.id)
+      if (!node) continue
+
+      const count = Math.max(1, 2 ** cur.level)
+      const offset = (cur.index - (count - 1) / 2) * 220
+      nodes.push({ id: node.id, data: { label: node.label }, position: { x: offset + 380, y: 30 + cur.level * 110 } })
+
+      if (node.leftId) {
+        edges.push({ id: `e-${node.id}-${node.leftId}`, source: node.id, target: node.leftId })
+        queue.push({ id: node.leftId, level: cur.level + 1, index: cur.index * 2 })
+      }
+      if (node.rightId) {
+        edges.push({ id: `e-${node.id}-${node.rightId}`, source: node.id, target: node.rightId })
+        queue.push({ id: node.rightId, level: cur.level + 1, index: cur.index * 2 + 1 })
+      }
+    }
 
     return { nodes, edges }
-  }, [goalType, rootGoal, weekGoals])
+  }, [planTreeNodes])
 
   return (
     <div className={`app ${theme}`}>
@@ -1007,7 +1064,18 @@ function App() {
 
           <section className="panel flow-wrap">
             <details>
-              <summary>目标树可视化（思维导图）</summary>
+              <summary>目标树可视化（二叉树）</summary>
+              <div className="row" style={{ marginTop: 8 }}>
+                <select value={selectedTreeNodeId} onChange={(e) => { setSelectedTreeNodeId(e.target.value); setTreeNodeLabelInput(planTreeNodes.find((n) => n.id === e.target.value)?.label || '') }}>
+                  {planTreeNodes.map((n) => (
+                    <option key={n.id} value={n.id}>{n.label}</option>
+                  ))}
+                </select>
+                <input value={treeNodeLabelInput} onChange={(e) => setTreeNodeLabelInput(e.target.value)} placeholder="节点名称" />
+                <button onClick={renameTreeNode}>重命名</button>
+                <button onClick={() => addTreeChild('left')}>+左子</button>
+                <button onClick={() => addTreeChild('right')}>+右子</button>
+              </div>
               <div className="flow" style={{ marginTop: 8 }}>
                 <ReactFlow nodes={flow.nodes} edges={flow.edges} fitView>
                   <Background />
