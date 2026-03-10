@@ -40,6 +40,7 @@ type UserArchive = Record<string, Record<string, PersistedState>>
 
 const STORAGE_KEY = 'plan_and_diary_v1'
 const USER_ARCHIVE_KEY = 'plan_and_diary_user_archives_v1'
+const DAILY_RESET_KEY = 'plan_and_diary_daily_reset_marker_v1'
 const MAX_ARCHIVE_DAYS_PER_USER = 180
 
 const normalizeUsername = (raw: string) => {
@@ -89,6 +90,7 @@ function App() {
   const [quadrantSelectedIds, setQuadrantSelectedIds] = useState<Record<string, boolean>>({})
   const [assignDays, setAssignDays] = useState<number[]>([])
   const [assignSlot, setAssignSlot] = useState<Slot>('上午')
+  const [todayMarker, setTodayMarker] = useState(dateKey(normalizeDate(new Date())))
   const [goalType, setGoalType] = useState<GoalType>('月目标')
   const [rootGoal, setRootGoal] = useState('')
   const [weekGoals, setWeekGoals] = useState<WeekGoal[]>([])
@@ -133,6 +135,42 @@ function App() {
     const start = selectedWeek?.startDate || fallbackWeekStart
     return buildWeekDates(start)
   }, [selectedWeek?.startDate, fallbackWeekStart])
+
+  useEffect(() => {
+    const timer = window.setInterval(() => {
+      const nowKey = dateKey(normalizeDate(new Date()))
+      setTodayMarker((prev) => (prev === nowKey ? prev : nowKey))
+    }, 60 * 1000)
+    return () => window.clearInterval(timer)
+  }, [])
+
+  useEffect(() => {
+    try {
+      const last = localStorage.getItem(DAILY_RESET_KEY)
+      if (last === todayMarker) return
+
+      const idx = selectedWeekDates.findIndex((d) => dateKey(d) === todayMarker)
+      const targetDay = idx >= 0 ? idx + 1 : 1
+
+      setTaskInput('')
+      setDay(targetDay)
+      setSlot('上午')
+      setDiaryDay(targetDay)
+      setDiaryTitle('')
+      setDiaryContent('')
+      setDiaryImages([])
+      setDiaryVideos([])
+      setDiaryLocation('')
+      setDiaryExpanded(false)
+      setQuadrantSelectedIds({})
+      setAssignDays([])
+      setAssignSlot('上午')
+
+      localStorage.setItem(DAILY_RESET_KEY, todayMarker)
+    } catch (e) {
+      console.warn('每日计划重置失败，已忽略。', e)
+    }
+  }, [todayMarker, selectedWeekDates])
 
   const monthMatrix = useMemo(() => {
     const now = new Date()
