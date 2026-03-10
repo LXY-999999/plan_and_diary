@@ -787,12 +787,9 @@ function App() {
     }
   }
 
-  const clearAll = () => {
-    if (!confirm('确认清空所有本地计划数据吗？')) return
+  const clearPlanData = () => {
+    if (!confirm('确认仅清空【计划模块】数据吗？')) return
     pushUndoSnapshot()
-    localStorage.removeItem(STORAGE_KEY)
-    setTheme('genki')
-    setUsername('default')
     setGoalType('月目标')
     setRootGoal('')
     setWeekGoals([])
@@ -804,11 +801,27 @@ function App() {
     setQuadrantItems([])
     setTaskScheduleOpenId(null)
     setTaskScheduleDays([])
-    setPage('plan')
+    setTaskScheduleSlot('上午')
+    setShowWeekGoalDropdown(false)
+    setShowDayGoalDropdown(false)
+    setDayGoalBatchInput('')
+  }
+
+  const clearDiaryData = () => {
+    if (!confirm('确认仅清空【日记模块】数据吗？')) return
+    pushUndoSnapshot()
     setDiariesByDate({})
     setDiaryDay(1)
     setDiaryTitle('')
     setDiaryContent('')
+    setDiaryImages([])
+    setDiaryVideos([])
+    setDiaryLocation('')
+    setDiaryExpanded(false)
+    setDiarySearchYear('')
+    setDiarySearchMonth('')
+    setDiarySearchDay('')
+    setAppliedDiarySearch({ year: '', month: '', day: '' })
   }
 
   const weekDayNumberByDateKey = useMemo(() => {
@@ -905,7 +918,7 @@ function App() {
           <button onClick={undoLastAction} disabled={undoStack.length === 0}>↶ 撤回</button>
           <button onClick={() => setTheme('genki')}>元气</button>
           <button onClick={() => setTheme('mint')}>薄荷</button>
-          <button onClick={clearAll}>清空数据</button>
+          <button onClick={page === 'plan' ? clearPlanData : clearDiaryData}>{page === 'plan' ? '清空计划' : '清空日记'}</button>
         </div>
       </header>
 
