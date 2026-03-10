@@ -957,13 +957,13 @@ function App() {
                   ] as QuadrantKey[]).map((key) => (
                     <div key={key} className="matrix-cell">
                       <h4>{quadrantLabel[key]}</h4>
-                      <div className="row" style={{ marginBottom: 6 }}>
+                      <div className="row" style={{ marginBottom: 6, alignItems: 'center' }}>
                         <input
                           value={quadrantQuickInput[key]}
                           onChange={(e) => setQuadrantQuickInput((prev) => ({ ...prev, [key]: e.target.value }))}
                           placeholder="输入任务"
                         />
-                        <button onClick={() => addQuadrantItemInCell(key)}>＋</button>
+                        <button className="add-box-btn" onClick={() => addQuadrantItemInCell(key)}>＋</button>
                       </div>
 
                       {(groupedQuadrants[key] || []).length === 0 ? (
