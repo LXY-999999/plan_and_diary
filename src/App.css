@@ -84,6 +84,7 @@ button:hover { opacity:.9; }
 .day-card { background:#fafafa; border:1px solid #eee; border-radius:10px; padding:6px; }
 .day-card h3 { margin:0 0 4px; font-size:14px; }
 .day-card h4 { margin:6px 0 3px; font-size:13px; color:#666; }
+.week-slot-drop-target { outline: 2px dashed #60a5fa; outline-offset: 3px; border-radius: 8px; background: rgba(96,165,250,.08); }
 .task { display:flex; justify-content:space-between; gap:6px; align-items:center; background:#fff; border:1px solid #eee; border-radius:8px; padding:5px 7px; margin-bottom:4px; font-size:14px; }
 .task.done { border-color:#57c96f; background:#f1fff4; }
 .task.failed { border-color:#f28b82; background:#fff3f2; }

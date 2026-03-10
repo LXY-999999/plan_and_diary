@@ -136,6 +136,7 @@ function App() {
   const [bulkModeWeekId, setBulkModeWeekId] = useState<string | null>(null)
   const [bulkSelected, setBulkSelected] = useState<Record<string, boolean>>({})
   const [draggingWeekTask, setDraggingWeekTask] = useState<{ day: number; taskId: string } | null>(null)
+  const [weekDropTarget, setWeekDropTarget] = useState<{ day: number; slot: Slot } | null>(null)
   const [undoStack, setUndoStack] = useState<Array<{ weekGoals: WeekGoal[]; diariesByDate: DiariesByDate; quadrantItems: QuadrantItem[]; planTreeNodes: PlanTreeNode[]; selectedWeekId: string }>>([])
   const [editingDiaryKey, setEditingDiaryKey] = useState<string | null>(null)
   const [editingDiaryId, setEditingDiaryId] = useState<string | null>(null)
@@ -1250,11 +1251,19 @@ function App() {
                           {(['上午', '下午', '晚上'] as Slot[]).map((s) => (
                             <div
                               key={s}
-                              onDragOver={(e) => e.preventDefault()}
+                              className={weekDropTarget?.day === d.day && weekDropTarget?.slot === s ? 'week-slot-drop-target' : ''}
+                              onDragOver={(e) => {
+                                e.preventDefault()
+                                if (draggingWeekTask) setWeekDropTarget({ day: d.day, slot: s })
+                              }}
+                              onDragLeave={() => {
+                                if (weekDropTarget?.day === d.day && weekDropTarget?.slot === s) setWeekDropTarget(null)
+                              }}
                               onDrop={() => {
                                 if (draggingWeekTask) {
                                   moveWeekTask(draggingWeekTask.day, draggingWeekTask.taskId, d.day, s)
                                   setDraggingWeekTask(null)
+                                  setWeekDropTarget(null)
                                 }
                               }}
                             >
@@ -1265,7 +1274,10 @@ function App() {
                                   key={t.id}
                                   draggable={bulkModeWeekId !== selectedWeek.id}
                                   onDragStart={() => setDraggingWeekTask({ day: d.day, taskId: t.id })}
-                                  onDragEnd={() => setDraggingWeekTask(null)}
+                                  onDragEnd={() => {
+                                    setDraggingWeekTask(null)
+                                    setWeekDropTarget(null)
+                                  }}
                                 >
                                   <span>{t.text}</span>
                                   <div className="task-status">
