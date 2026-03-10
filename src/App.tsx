@@ -112,10 +112,6 @@ function App() {
   const [rootGoal, setRootGoal] = useState('')
   const [weekGoals, setWeekGoals] = useState<WeekGoal[]>([])
   const [planTreeNodes, setPlanTreeNodes] = useState<PlanTreeNode[]>(defaultPlanTree())
-  const [selectedTreeNodeId, setSelectedTreeNodeId] = useState('root')
-  const [treeNodeLabelInput, setTreeNodeLabelInput] = useState('')
-  const [treeNodeLayerInput, setTreeNodeLayerInput] = useState<GoalLayer>('总目标')
-  const [treeNodeQuadrantInput, setTreeNodeQuadrantInput] = useState<'' | QuadrantKey>('')
 
   const [selectedWeekId, setSelectedWeekId] = useState<string>('')
   const selectedWeek = weekGoals.find((w) => w.id === selectedWeekId)
@@ -327,14 +323,6 @@ function App() {
     setBulkSelected({})
   }, [selectedWeekId])
 
-  useEffect(() => {
-    const current = planTreeNodes.find((n) => n.id === selectedTreeNodeId)
-    if (current) {
-      setTreeNodeLabelInput(current.label)
-      setTreeNodeLayerInput(current.id === 'root' ? '总目标' : current.goalLayer)
-      setTreeNodeQuadrantInput(current.quadrant || '')
-    }
-  }, [selectedTreeNodeId, planTreeNodes])
 
   useEffect(() => {
     setAppliedDiarySearch({ year: diarySearchYear, month: diarySearchMonth, day: diarySearchDay })
@@ -704,9 +692,6 @@ function App() {
     setOpenAIKey('')
     setQuadrantItems([])
     setPlanTreeNodes(defaultPlanTree())
-    setSelectedTreeNodeId('root')
-    setTreeNodeLabelInput('总目标')
-    setTreeNodeLayerInput('总目标')
     setTaskScheduleOpenId(null)
     setTaskScheduleDays([])
     setTaskScheduleSlot('上午')
@@ -918,8 +903,6 @@ function App() {
     return '📝 待保存'
   }, [saveStatus, lastSavedAt])
 
-  const selectedTreeNode = planTreeNodes.find((n) => n.id === selectedTreeNodeId)
-
   const addTreeChildToNode = (nodeId: string, side: 'left' | 'right') => {
     const parent = planTreeNodes.find((n) => n.id === nodeId)
     if (!parent) return
@@ -941,21 +924,6 @@ function App() {
         .map((n) => (n.id === parent.id ? { ...n, ...(side === 'left' ? { leftId: newId } : { rightId: newId }) } : n))
         .concat([{ id: newId, label: `${nextLayer}`, goalLayer: nextLayer }]),
     )
-    setSelectedTreeNodeId(newId)
-    setTreeNodeLabelInput(`${nextLayer}`)
-    setTreeNodeLayerInput(nextLayer)
-  }
-
-  const addTreeChild = (side: 'left' | 'right') => {
-    if (!selectedTreeNode) return
-    addTreeChildToNode(selectedTreeNode.id, side)
-  }
-
-  const updateTreeNodeLayer = (layer: GoalLayer) => {
-    setTreeNodeLayerInput(layer)
-    if (!selectedTreeNodeId) return
-    pushUndoSnapshot()
-    setPlanTreeNodes((prev) => prev.map((n) => (n.id === selectedTreeNodeId ? { ...n, goalLayer: n.id === 'root' ? '总目标' : layer } : n)))
   }
 
   const syncTreeNodeToQuadrant = (nodeId: string, target: '' | QuadrantKey) => {
@@ -977,22 +945,6 @@ function App() {
       }
       return [{ id: uuid(), text: node.label, quadrant: target, createdAt: Date.now(), sourceNodeId: nodeId }, ...prev]
     })
-  }
-
-  const renameTreeNode = () => {
-    if (!selectedTreeNodeId || !treeNodeLabelInput.trim()) return
-    const nextLabel = treeNodeLabelInput.trim()
-    pushUndoSnapshot()
-    setPlanTreeNodes((prev) =>
-      prev.map((n) =>
-        n.id === selectedTreeNodeId
-          ? { ...n, label: nextLabel, goalLayer: n.id === 'root' ? '总目标' : treeNodeLayerInput }
-          : n,
-      ),
-    )
-    if (selectedTreeNodeId !== 'root') {
-      setQuadrantItems((prev) => prev.map((q) => (q.sourceNodeId === selectedTreeNodeId ? { ...q, text: nextLabel } : q)))
-    }
   }
 
   const renameTreeNodeById = (nodeId: string) => {
@@ -1036,7 +988,6 @@ function App() {
         })),
     )
     setQuadrantItems((prev) => prev.filter((q) => !(q.sourceNodeId && removeSet.has(q.sourceNodeId))))
-    setSelectedTreeNodeId('root')
   }
 
   const flow = useMemo(() => {
@@ -1058,7 +1009,7 @@ function App() {
         id: node.id,
         data: {
           label: (
-            <div className="tree-node-card" onClick={() => setSelectedTreeNodeId(node.id)} onDoubleClick={() => renameTreeNodeById(node.id)}>
+            <div className="tree-node-card" onDoubleClick={() => renameTreeNodeById(node.id)}>
               <div>{`${node.goalLayer}｜${node.label}`}</div>
               <div style={{ display: 'flex', gap: 4, marginTop: 4, alignItems: 'center' }}>
                 <button className="schedule-box-btn" onClick={() => addTreeChildToNode(node.id, 'left')}>L+</button>
@@ -1214,44 +1165,11 @@ function App() {
           <section className="panel flow-wrap">
             <details>
               <summary>目标树可视化（二叉树）</summary>
-              <div className="row" style={{ marginTop: 8 }}>
-                <select value={selectedTreeNodeId} onChange={(e) => { setSelectedTreeNodeId(e.target.value); setTreeNodeLabelInput(planTreeNodes.find((n) => n.id === e.target.value)?.label || '') }}>
-                  {planTreeNodes.map((n) => (
-                    <option key={n.id} value={n.id}>{`${n.goalLayer}｜${n.label}`}</option>
-                  ))}
-                </select>
-                <select value={treeNodeLayerInput} onChange={(e) => updateTreeNodeLayer(e.target.value as GoalLayer)} disabled={selectedTreeNodeId === 'root'}>
-                  <option value="总目标">总目标</option>
-                  <option value="年目标">年目标</option>
-                  <option value="月目标">月目标</option>
-                  <option value="周目标">周目标</option>
-                </select>
-                <select
-                  value={treeNodeQuadrantInput}
-                  onChange={(e) => {
-                    const v = e.target.value as '' | QuadrantKey
-                    setTreeNodeQuadrantInput(v)
-                    syncTreeNodeToQuadrant(selectedTreeNodeId, v)
-                  }}
-                  disabled={selectedTreeNodeId === 'root'}
-                >
-                  <option value="">不入象限</option>
-                  <option value="important_urgent">重要且紧急</option>
-                  <option value="important_not_urgent">重要不紧急</option>
-                  <option value="not_important_urgent">不重要但紧急</option>
-                  <option value="not_important_not_urgent">不重要不紧急</option>
-                </select>
-                <input value={treeNodeLabelInput} onChange={(e) => setTreeNodeLabelInput(e.target.value)} placeholder="节点名称" />
-                <button onClick={renameTreeNode}>重命名</button>
-                <button onClick={() => addTreeChild('left')}>+左子</button>
-                <button onClick={() => addTreeChild('right')}>+右子</button>
-              </div>
               <div className="flow" style={{ marginTop: 8 }}>
                 <ReactFlow
                   nodes={flow.nodes}
                   edges={flow.edges}
                   fitView
-                  onNodeClick={(_, node) => setSelectedTreeNodeId(node.id)}
                 >
                   <Background />
                   <Controls />
