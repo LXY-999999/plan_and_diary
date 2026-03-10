@@ -37,6 +37,22 @@ type UserArchive = Record<string, Record<string, PersistedState>>
 
 const STORAGE_KEY = 'plan_and_diary_v1'
 const USER_ARCHIVE_KEY = 'plan_and_diary_user_archives_v1'
+const MAX_ARCHIVE_DAYS_PER_USER = 180
+
+const normalizeUsername = (raw: string) => {
+  const cleaned = (raw || 'default').trim().toLowerCase().replace(/\s+/g, '_')
+  return cleaned || 'default'
+}
+
+const pruneArchiveDays = (byDay: Record<string, PersistedState>, maxDays: number) => {
+  const keys = Object.keys(byDay).sort((a, b) => parseDateKey(b).getTime() - parseDateKey(a).getTime())
+  const keep = new Set(keys.slice(0, maxDays))
+  const next: Record<string, PersistedState> = {}
+  keys.forEach((k) => {
+    if (keep.has(k)) next[k] = byDay[k]
+  })
+  return next
+}
 
 const emptyDays = (): DayPlan[] => Array.from({ length: 7 }, (_, i) => ({ day: i + 1, tasks: [] }))
 const uuid = () => Math.random().toString(36).slice(2, 10)
@@ -162,18 +178,63 @@ function App() {
       diariesByDate,
       username,
     }
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(payload))
 
-    try {
-      const userKey = (username || 'default').trim() || 'default'
-      const dayKey = dateKey(normalizeDate(new Date()))
-      const rawArchive = localStorage.getItem(USER_ARCHIVE_KEY)
-      const archive: UserArchive = rawArchive ? JSON.parse(rawArchive) : {}
-      const userFolder = archive[userKey] || {}
-      archive[userKey] = { ...userFolder, [dayKey]: payload }
-      localStorage.setItem(USER_ARCHIVE_KEY, JSON.stringify(archive))
-    } catch (e) {
-      console.warn('用户每日自动归档失败，已忽略。', e)
+    const timer = window.setTimeout(() => {
+      try {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(payload))
+
+        const userKey = normalizeUsername(username)
+        const dayKey = dateKey(normalizeDate(new Date()))
+        const rawArchive = localStorage.getItem(USER_ARCHIVE_KEY)
+        const archive: UserArchive = rawArchive ? JSON.parse(rawArchive) : {}
+        const userFolder = archive[userKey] || {}
+        const nextUserFolder = pruneArchiveDays({ ...userFolder, [dayKey]: payload }, MAX_ARCHIVE_DAYS_PER_USER)
+        archive[userKey] = nextUserFolder
+        localStorage.setItem(USER_ARCHIVE_KEY, JSON.stringify(archive))
+      } catch (e) {
+        console.warn('自动保存失败，已忽略。', e)
+      }
+    }, 400)
+
+    return () => window.clearTimeout(timer)
+  }, [theme, goalType, rootGoal, weekGoals, selectedWeekId, openAIKey, diariesByDate, username])
+
+  useEffect(() => {
+    const saveNow = () => {
+      try {
+        const payload: PersistedState = {
+          theme,
+          goalType,
+          rootGoal,
+          weekGoals,
+          selectedWeekId,
+          openAIKey,
+          diariesByDate,
+          username,
+        }
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(payload))
+
+        const userKey = normalizeUsername(username)
+        const dayKey = dateKey(normalizeDate(new Date()))
+        const rawArchive = localStorage.getItem(USER_ARCHIVE_KEY)
+        const archive: UserArchive = rawArchive ? JSON.parse(rawArchive) : {}
+        const userFolder = archive[userKey] || {}
+        archive[userKey] = pruneArchiveDays({ ...userFolder, [dayKey]: payload }, MAX_ARCHIVE_DAYS_PER_USER)
+        localStorage.setItem(USER_ARCHIVE_KEY, JSON.stringify(archive))
+      } catch (e) {
+        console.warn('页面隐藏时保存失败，已忽略。', e)
+      }
+    }
+
+    const onHiddenSave = () => {
+      if (document.visibilityState === 'hidden') saveNow()
+    }
+
+    document.addEventListener('visibilitychange', onHiddenSave)
+    window.addEventListener('beforeunload', saveNow)
+    return () => {
+      document.removeEventListener('visibilitychange', onHiddenSave)
+      window.removeEventListener('beforeunload', saveNow)
     }
   }, [theme, goalType, rootGoal, weekGoals, selectedWeekId, openAIKey, diariesByDate, username])
 
