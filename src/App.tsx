@@ -920,29 +920,35 @@ function App() {
 
   const selectedTreeNode = planTreeNodes.find((n) => n.id === selectedTreeNodeId)
 
-  const addTreeChild = (side: 'left' | 'right') => {
-    if (!selectedTreeNode) return
-    if ((side === 'left' && selectedTreeNode.leftId) || (side === 'right' && selectedTreeNode.rightId)) {
+  const addTreeChildToNode = (nodeId: string, side: 'left' | 'right') => {
+    const parent = planTreeNodes.find((n) => n.id === nodeId)
+    if (!parent) return
+    if ((side === 'left' && parent.leftId) || (side === 'right' && parent.rightId)) {
       alert('该方向已有子节点')
       return
     }
     pushUndoSnapshot()
     const newId = uuid()
     const nextLayer: GoalLayer =
-      selectedTreeNode.goalLayer === '总目标'
+      parent.goalLayer === '总目标'
         ? '年目标'
-        : selectedTreeNode.goalLayer === '年目标'
+        : parent.goalLayer === '年目标'
           ? '月目标'
           : '周目标'
 
     setPlanTreeNodes((prev) =>
       prev
-        .map((n) => (n.id === selectedTreeNode.id ? { ...n, ...(side === 'left' ? { leftId: newId } : { rightId: newId }) } : n))
+        .map((n) => (n.id === parent.id ? { ...n, ...(side === 'left' ? { leftId: newId } : { rightId: newId }) } : n))
         .concat([{ id: newId, label: `${nextLayer}`, goalLayer: nextLayer }]),
     )
     setSelectedTreeNodeId(newId)
     setTreeNodeLabelInput(`${nextLayer}`)
     setTreeNodeLayerInput(nextLayer)
+  }
+
+  const addTreeChild = (side: 'left' | 'right') => {
+    if (!selectedTreeNode) return
+    addTreeChildToNode(selectedTreeNode.id, side)
   }
 
   const updateTreeNodeLayer = (layer: GoalLayer) => {
@@ -1054,21 +1060,25 @@ function App() {
           label: (
             <div className="tree-node-card" onClick={() => setSelectedTreeNodeId(node.id)} onDoubleClick={() => renameTreeNodeById(node.id)}>
               <div>{`${node.goalLayer}｜${node.label}`}</div>
-              {node.id !== 'root' && (
-                <div style={{ display: 'flex', gap: 4, marginTop: 4, alignItems: 'center' }}>
-                  <details className="tree-node-menu">
-                    <summary className="schedule-box-btn">▾</summary>
-                    <div className="tree-node-menu-pop">
-                      <button onClick={() => syncTreeNodeToQuadrant(node.id, '')}>不入象限</button>
-                      <button onClick={() => syncTreeNodeToQuadrant(node.id, 'important_urgent')}>重要且紧急</button>
-                      <button onClick={() => syncTreeNodeToQuadrant(node.id, 'important_not_urgent')}>重要不紧急</button>
-                      <button onClick={() => syncTreeNodeToQuadrant(node.id, 'not_important_urgent')}>不重要但紧急</button>
-                      <button onClick={() => syncTreeNodeToQuadrant(node.id, 'not_important_not_urgent')}>不重要不紧急</button>
-                    </div>
-                  </details>
-                  <button className="schedule-box-btn" onClick={() => deleteTreeNode(node.id)}>✕</button>
-                </div>
-              )}
+              <div style={{ display: 'flex', gap: 4, marginTop: 4, alignItems: 'center' }}>
+                <button className="schedule-box-btn" onClick={() => addTreeChildToNode(node.id, 'left')}>L+</button>
+                <button className="schedule-box-btn" onClick={() => addTreeChildToNode(node.id, 'right')}>R+</button>
+                {node.id !== 'root' && (
+                  <>
+                    <details className="tree-node-menu">
+                      <summary className="schedule-box-btn">▾</summary>
+                      <div className="tree-node-menu-pop">
+                        <button onClick={() => syncTreeNodeToQuadrant(node.id, '')}>不入象限</button>
+                        <button onClick={() => syncTreeNodeToQuadrant(node.id, 'important_urgent')}>重要且紧急</button>
+                        <button onClick={() => syncTreeNodeToQuadrant(node.id, 'important_not_urgent')}>重要不紧急</button>
+                        <button onClick={() => syncTreeNodeToQuadrant(node.id, 'not_important_urgent')}>不重要但紧急</button>
+                        <button onClick={() => syncTreeNodeToQuadrant(node.id, 'not_important_not_urgent')}>不重要不紧急</button>
+                      </div>
+                    </details>
+                    <button className="schedule-box-btn" onClick={() => deleteTreeNode(node.id)}>✕</button>
+                  </>
+                )}
+              </div>
             </div>
           ),
         },
