@@ -14,24 +14,21 @@ button:hover { opacity:.9; }
 .chip { background:#f2f2f2; color:#222; }
 .chip.active { background:#111; color:#fff; }
 .flow-wrap .flow { height: 420px; border:1px dashed #ddd; border-radius:10px; overflow:hidden; }
-.week-grid { display:grid; grid-template-columns: repeat(7, minmax(180px,1fr)); gap:10px; overflow:auto; }
-
-/* 固定响应式规则（定死） */
-@media (max-width: 1440px) {
-  .week-grid { grid-template-columns: repeat(5, minmax(180px,1fr)); }
-  .month-grid { grid-template-columns: repeat(7, minmax(110px,1fr)); }
+.week-grid {
+  display:grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap:10px;
 }
 
+/* 计划板块：像日记一样自然适配，不做缩放 */
 @media (max-width: 1200px) {
   .app { padding: 14px; }
-  .week-grid { grid-template-columns: repeat(4, minmax(170px,1fr)); }
   .month-grid { grid-template-columns: repeat(5, minmax(120px,1fr)); }
 }
 
 @media (max-width: 992px) {
   .app { padding: 12px; }
   .panel { padding: 12px; border-radius: 14px; }
-  .week-grid { grid-template-columns: repeat(3, minmax(150px,1fr)); }
   .month-grid { grid-template-columns: repeat(4, minmax(120px,1fr)); }
   .flow-wrap .flow { height: 340px; }
 }
@@ -42,7 +39,6 @@ button:hover { opacity:.9; }
   input, select, textarea, button { width: 100%; }
   .theme-switch { width: 100%; display:flex; gap:8px; flex-wrap: wrap; }
   .theme-switch button { margin-left: 0; flex:1; min-width: 120px; }
-  .week-grid { grid-template-columns: repeat(2, minmax(140px,1fr)); }
   .month-grid { grid-template-columns: repeat(3, minmax(110px,1fr)); }
   .bottom-nav { padding-left: 8px; padding-right: 8px; }
 }
@@ -197,7 +193,7 @@ button {
 }
 
 button:hover {
-  transform: translateY(-1px);
+  opacity: .92;
 }
 
 .day-card, .month-cell, .compose-card {
@@ -210,7 +206,6 @@ button:hover {
 }
 
 .task:hover {
-  transform: translateY(-1px);
   box-shadow: 0 6px 14px rgba(0,0,0,.06);
 }
 
