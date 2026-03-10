@@ -68,7 +68,7 @@ button:hover { opacity:.9; }
   .compact-controls .span-2 { grid-column: auto; }
   .quick-actions { grid-template-columns: 1fr; }
   .month-grid { grid-template-columns: 1fr; }
-  .month-weekday { display: none; }
+  .month-weekday { display: block; font-size: 11px; color: #94a3b8; }
   .bottom-nav { gap: 6px; padding: 8px 8px calc(8px + env(safe-area-inset-bottom)); }
 }
 .day-card { background:#fafafa; border:1px solid #eee; border-radius:10px; padding:6px; }
