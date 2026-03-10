@@ -1266,6 +1266,13 @@ function App() {
                                   setWeekDropTarget(null)
                                 }
                               }}
+                              onTouchEnd={() => {
+                                if (draggingWeekTask) {
+                                  moveWeekTask(draggingWeekTask.day, draggingWeekTask.taskId, d.day, s)
+                                  setDraggingWeekTask(null)
+                                  setWeekDropTarget(null)
+                                }
+                              }}
                             >
                               <h4>{s}</h4>
                               {d.tasks.filter((t) => t.slot === s).map((t) => (
@@ -1278,6 +1285,7 @@ function App() {
                                     setDraggingWeekTask(null)
                                     setWeekDropTarget(null)
                                   }}
+                                  onTouchStart={() => setDraggingWeekTask({ day: d.day, taskId: t.id })}
                                 >
                                   <span>{t.text}</span>
                                   <div className="task-status">
