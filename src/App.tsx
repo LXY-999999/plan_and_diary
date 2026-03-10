@@ -100,6 +100,8 @@ function App() {
   const [weekGoals, setWeekGoals] = useState<WeekGoal[]>([])
   const [weekTitle, setWeekTitle] = useState('')
   const [showWeekGoalDropdown, setShowWeekGoalDropdown] = useState(false)
+  const [showDayGoalDropdown, setShowDayGoalDropdown] = useState(false)
+  const [dayGoalBatchInput, setDayGoalBatchInput] = useState('')
 
   const [selectedWeekId, setSelectedWeekId] = useState<string>('')
   const selectedWeek = weekGoals.find((w) => w.id === selectedWeekId)
@@ -367,6 +369,31 @@ function App() {
       }),
     )
     setTaskInput('')
+  }
+
+  const addBatchDayGoals = () => {
+    if (!selectedWeek) return
+    const items = dayGoalBatchInput
+      .split('\n')
+      .map((x) => x.trim())
+      .filter(Boolean)
+    if (!items.length) return
+
+    pushUndoSnapshot()
+    setWeekGoals((prev) =>
+      prev.map((w) => {
+        if (w.id !== selectedWeek.id) return w
+        return {
+          ...w,
+          days: w.days.map((d) =>
+            d.day === day
+              ? { ...d, tasks: [...d.tasks, ...items.map((text) => ({ id: uuid(), text, slot }))] }
+              : d,
+          ),
+        }
+      }),
+    )
+    setDayGoalBatchInput('')
   }
 
   const addQuadrantItemInCell = (quadrant: QuadrantKey) => {
@@ -855,26 +882,45 @@ function App() {
               </div>
             )}
 
-            <div className="row compact-controls" style={{ marginTop: 8 }}>
-              <select value={day} onChange={(e) => setDay(Number(e.target.value))}>
-                {selectedWeekDates.map((d, i) => (
-                  <option key={i + 1} value={i + 1}>{d.getMonth() + 1}月{d.getDate()}日</option>
-                ))}
-              </select>
-              <select value={slot} onChange={(e) => setSlot(e.target.value as Slot)}>
-                <option>上午</option>
-                <option>下午</option>
-                <option>晚上</option>
-              </select>
-              <input className="span-2" value={taskInput} onChange={(e) => setTaskInput(e.target.value)} placeholder="手动添加任务（回车后点添加）" />
-              <button className="span-2" onClick={addTask}>添加到当日</button>
-            </div>
+            <button className="week-goal-toggle" style={{ marginTop: 8 }} onClick={() => setShowDayGoalDropdown((v) => !v)}>
+              请添加你的日目标 {showDayGoalDropdown ? '▴' : '▾'}
+            </button>
 
-            <div className="chips quick-actions" style={{ marginTop: 6 }}>
-              <button className="chip" onClick={() => setTaskInput('复盘昨天完成情况')}>+ 复盘</button>
-              <button className="chip" onClick={() => setTaskInput('处理最重要的一件事')}>+ MIT</button>
-              <button className="chip" onClick={() => setTaskInput('整理收件箱与待办')}>+ 清空待办</button>
-            </div>
+            {showDayGoalDropdown && (
+              <div className="week-goal-dropdown">
+                <div className="row compact-controls">
+                  <select value={day} onChange={(e) => setDay(Number(e.target.value))}>
+                    {selectedWeekDates.map((d, i) => (
+                      <option key={i + 1} value={i + 1}>{d.getMonth() + 1}月{d.getDate()}日</option>
+                    ))}
+                  </select>
+                  <select value={slot} onChange={(e) => setSlot(e.target.value as Slot)}>
+                    <option>上午</option>
+                    <option>下午</option>
+                    <option>晚上</option>
+                  </select>
+                  <input className="span-2" value={taskInput} onChange={(e) => setTaskInput(e.target.value)} placeholder="单条输入" />
+                  <button onClick={addTask}>添加单条</button>
+                </div>
+
+                <textarea
+                  style={{ width: '100%', marginTop: 6 }}
+                  rows={3}
+                  value={dayGoalBatchInput}
+                  onChange={(e) => setDayGoalBatchInput(e.target.value)}
+                  placeholder={'多条输入（每行一条）\n例如：\n复盘昨天\n完成PRD\n30分钟运动'}
+                />
+                <div className="row" style={{ marginTop: 6 }}>
+                  <button onClick={addBatchDayGoals}>批量添加（多选输入）</button>
+                </div>
+
+                <div className="chips quick-actions" style={{ marginTop: 6 }}>
+                  <button className="chip" onClick={() => setTaskInput('复盘昨天完成情况')}>+ 复盘</button>
+                  <button className="chip" onClick={() => setTaskInput('处理最重要的一件事')}>+ MIT</button>
+                  <button className="chip" onClick={() => setTaskInput('整理收件箱与待办')}>+ 清空待办</button>
+                </div>
+              </div>
+            )}
 
             <details>
               <summary>🤖 ChatGPT 自动拆解为 7 天（需 OpenAI Key）</summary>
