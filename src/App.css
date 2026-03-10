@@ -1,12 +1,12 @@
-:root { font-family: Inter, system-ui, -apple-system, Segoe UI, Roboto, 'PingFang SC', sans-serif; font-size: 13px; }
+:root { font-family: Inter, system-ui, -apple-system, Segoe UI, Roboto, 'PingFang SC', sans-serif; font-size: 12px; }
 * { box-sizing: border-box; }
 body { margin: 0; background: #f7f8fc; }
 .app { max-width: 1200px; margin: 0 auto; padding: 10px; }
 header { display:flex; justify-content:space-between; align-items:center; margin-bottom: 8px; gap:8px; flex-wrap:wrap; }
-h1 { margin:0; font-size: clamp(16px, 2.6vw, 22px); }
-.panel { background:#fff; border-radius:12px; padding:10px; margin-bottom:8px; box-shadow:0 4px 12px rgba(0,0,0,.05); }
-.row { display:flex; gap:6px; flex-wrap:wrap; }
-input, select, textarea, button { border-radius:8px; border:1px solid #ddd; padding:6px 8px; font-size:13px; }
+h1 { margin:0; font-size: clamp(15px, 2.2vw, 20px); }
+.panel { background:#fff; border-radius:10px; padding:8px; margin-bottom:7px; box-shadow:0 3px 10px rgba(0,0,0,.05); }
+.row { display:flex; gap:5px; flex-wrap:wrap; }
+input, select, textarea, button { border-radius:8px; border:1px solid #ddd; padding:5px 7px; font-size:12px; }
 input, select, textarea { background:#fff; }
 button { cursor:pointer; background:#111; color:#fff; border:none; }
 button:hover { opacity:.9; }
@@ -16,8 +16,8 @@ button:hover { opacity:.9; }
 .flow-wrap .flow { height: 240px; border:1px dashed #ddd; border-radius:10px; overflow:hidden; }
 .week-grid {
   display:grid;
-  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-  gap:8px;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap:6px;
 }
 
 /* 计划板块：像日记一样自然适配，不做缩放 */
@@ -59,9 +59,9 @@ button:hover { opacity:.9; }
   .bottom-nav { gap: 6px; padding: 8px 8px calc(8px + env(safe-area-inset-bottom)); }
 }
 .day-card { background:#fafafa; border:1px solid #eee; border-radius:10px; padding:6px; }
-.day-card h3 { margin:0 0 4px; font-size:13px; }
-.day-card h4 { margin:6px 0 3px; font-size:12px; color:#666; }
-.task { display:flex; justify-content:space-between; gap:6px; align-items:center; background:#fff; border:1px solid #eee; border-radius:8px; padding:4px 6px; margin-bottom:4px; font-size:12px; }
+.day-card h3 { margin:0 0 3px; font-size:12px; }
+.day-card h4 { margin:5px 0 2px; font-size:11px; color:#666; }
+.task { display:flex; justify-content:space-between; gap:5px; align-items:center; background:#fff; border:1px solid #eee; border-radius:8px; padding:3px 5px; margin-bottom:3px; font-size:11px; }
 .task.done { border-color:#57c96f; background:#f1fff4; }
 .task.failed { border-color:#f28b82; background:#fff3f2; }
 .task-status { display:flex; align-items:center; gap:4px; position:relative; }
@@ -191,7 +191,7 @@ input, select, textarea {
 
 /* 桌面端：组件更大、更紧凑，不拉太长 */
 @media (min-width: 769px) {
-  input, select, button { padding: 10px 12px; font-size: 15px; }
+  input, select, button { padding: 7px 9px; font-size: 12px; }
   .row { align-items: center; }
   .row > input,
   .row > select,
