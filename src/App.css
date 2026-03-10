@@ -56,6 +56,9 @@ button:hover { opacity:.9; }
   input, select, textarea, button { width: 100%; }
   .theme-switch { width: 100%; display:flex; gap:8px; flex-wrap: wrap; }
   .theme-switch button { margin-left: 0; flex:1; min-width: 120px; }
+  .compact-header-actions { width: 100%; flex-wrap: nowrap; justify-content: space-between; }
+  .compact-header-actions button { width: auto; min-width: 0; flex: 0 0 auto; }
+  .save-hint-mini { font-size: 11px; white-space: nowrap; }
   .month-grid { grid-template-columns: repeat(3, minmax(110px,1fr)); }
   .bottom-nav { padding-left: 8px; padding-right: 8px; }
 }
