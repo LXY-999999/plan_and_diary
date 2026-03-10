@@ -452,7 +452,10 @@ function App() {
           ...w,
           days: w.days.map((d) => {
             if (!taskScheduleDays.includes(d.day)) return d
-            return { ...d, tasks: [...d.tasks, { id: uuid(), text: item.text, slot: taskScheduleSlot }] }
+            return {
+              ...d,
+              tasks: [...d.tasks, { id: uuid(), text: `${quadrantEmoji[item.quadrant]} ${item.text}`, slot: taskScheduleSlot }],
+            }
           }),
         }
       }),
@@ -819,10 +822,17 @@ function App() {
   }, [diariesByDate, appliedDiarySearch])
 
   const quadrantLabel: Record<QuadrantKey, string> = {
-    important_urgent: '重要且紧急',
-    important_not_urgent: '重要不紧急',
-    not_important_urgent: '不重要但紧急',
-    not_important_not_urgent: '不重要不紧急',
+    important_urgent: '🚨 重要且紧急',
+    important_not_urgent: '🎯 重要不紧急',
+    not_important_urgent: '⏱️ 不重要但紧急',
+    not_important_not_urgent: '🧹 不重要不紧急',
+  }
+
+  const quadrantEmoji: Record<QuadrantKey, string> = {
+    important_urgent: '🚨',
+    important_not_urgent: '🎯',
+    not_important_urgent: '⏱️',
+    not_important_not_urgent: '🧹',
   }
 
   const groupedQuadrants = useMemo(() => {
