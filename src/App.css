@@ -115,3 +115,86 @@ button:hover { opacity:.9; }
 .app.mint h1 { color: var(--accent); }
 .app.mint button { background: linear-gradient(135deg,#24b39b,#63d1c0); }
 .app.mint .chip.active { background: var(--accent); }
+
+/* ===== Aesthetic refresh ===== */
+:root {
+  --bg-grad: radial-gradient(1200px 500px at 10% -10%, #ffd4e2 0%, transparent 60%),
+    radial-gradient(900px 500px at 90% -20%, #d7fff6 0%, transparent 55%),
+    #f6f8fc;
+  --card-bg: rgba(255, 255, 255, 0.82);
+  --card-border: rgba(255, 255, 255, 0.55);
+  --shadow-soft: 0 12px 30px rgba(17, 24, 39, 0.08);
+}
+
+body {
+  background: var(--bg-grad);
+  color: #1f2937;
+}
+
+.app {
+  max-width: 1240px;
+}
+
+header {
+  position: sticky;
+  top: 0;
+  z-index: 20;
+  background: rgba(246, 248, 252, 0.72);
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.5);
+  border-radius: 14px;
+  padding: 10px 12px;
+}
+
+.panel {
+  background: var(--card-bg);
+  border: 1px solid var(--card-border);
+  backdrop-filter: blur(8px);
+  box-shadow: var(--shadow-soft);
+}
+
+.panel h2 {
+  margin-top: 0;
+  font-size: 18px;
+  letter-spacing: 0.2px;
+}
+
+input, select, textarea {
+  border: 1px solid #e2e8f0;
+  box-shadow: 0 1px 0 rgba(0, 0, 0, 0.02);
+}
+
+input:focus, select:focus, textarea:focus {
+  outline: none;
+  border-color: #94a3b8;
+  box-shadow: 0 0 0 3px rgba(148, 163, 184, 0.2);
+}
+
+button {
+  font-weight: 600;
+  letter-spacing: 0.2px;
+  box-shadow: 0 6px 14px rgba(0, 0, 0, 0.12);
+}
+
+button:hover {
+  transform: translateY(-1px);
+}
+
+.day-card, .month-cell, .compose-card {
+  background: rgba(255, 255, 255, 0.72);
+  border: 1px solid rgba(226, 232, 240, 0.9);
+}
+
+.task {
+  transition: all .16s ease;
+}
+
+.task:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 6px 14px rgba(0,0,0,.06);
+}
+
+.bottom-nav {
+  background: rgba(255,255,255,.88);
+  border-top: 1px solid rgba(226, 232, 240, .9);
+}
