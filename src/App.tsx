@@ -100,6 +100,7 @@ function App() {
   const [taskScheduleOpenId, setTaskScheduleOpenId] = useState<string | null>(null)
   const [taskScheduleDays, setTaskScheduleDays] = useState<number[]>([])
   const [taskScheduleSlot, setTaskScheduleSlot] = useState<Slot>('上午')
+  const [draggingQuadrantItemId, setDraggingQuadrantItemId] = useState<string | null>(null)
   const [todayMarker, setTodayMarker] = useState(dateKey(normalizeDate(new Date())))
   const [goalType, setGoalType] = useState<GoalType>('月目标')
   const [rootGoal, setRootGoal] = useState('')
@@ -433,6 +434,24 @@ function App() {
   const moveQuadrantItem = (itemId: string, targetQuadrant: QuadrantKey) => {
     pushUndoSnapshot()
     setQuadrantItems((prev) => prev.map((x) => (x.id === itemId ? { ...x, quadrant: targetQuadrant } : x)))
+  }
+
+  const onQuadrantItemDragStart = (itemId: string, event: any) => {
+    setDraggingQuadrantItemId(itemId)
+    event.dataTransfer.setData('text/plain', itemId)
+    event.dataTransfer.effectAllowed = 'move'
+  }
+
+  const onQuadrantItemDragEnd = () => {
+    setDraggingQuadrantItemId(null)
+  }
+
+  const onQuadrantCellDrop = (targetQuadrant: QuadrantKey, event: any) => {
+    event.preventDefault()
+    const itemId = event.dataTransfer.getData('text/plain') || draggingQuadrantItemId
+    if (!itemId) return
+    moveQuadrantItem(itemId, targetQuadrant)
+    setDraggingQuadrantItemId(null)
   }
 
   const applyTaskScheduleToWeek = (item: QuadrantItem) => {
@@ -975,7 +994,12 @@ function App() {
                     'not_important_not_urgent',
                     'not_important_urgent',
                   ] as QuadrantKey[]).map((key) => (
-                    <div key={key} className="matrix-cell">
+                    <div
+                      key={key}
+                      className="matrix-cell"
+                      onDragOver={(e) => e.preventDefault()}
+                      onDrop={(e) => onQuadrantCellDrop(key, e)}
+                    >
                       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 6 }}>
                         <h4 style={{ margin: 0 }}>{quadrantLabel[key]}</h4>
                         <button className="schedule-box-btn" onClick={() => toggleQuadrantComposer(key)}>
@@ -997,22 +1021,17 @@ function App() {
                         <small className="muted">暂无</small>
                       ) : (
                         (groupedQuadrants[key] || []).map((item) => (
-                          <div key={item.id} className="mini-task" style={{ display: 'block', whiteSpace: 'normal', marginTop: 6 }}>
+                          <div
+                            key={item.id}
+                            className="mini-task"
+                            style={{ display: 'block', whiteSpace: 'normal', marginTop: 6 }}
+                            draggable
+                            onDragStart={(e) => onQuadrantItemDragStart(item.id, e)}
+                            onDragEnd={onQuadrantItemDragEnd}
+                          >
                             <div style={{ display: 'flex', justifyContent: 'space-between', gap: 6, alignItems: 'center' }}>
-                              <span>{item.text}</span>
-                              <div style={{ display: 'flex', gap: 4, alignItems: 'center' }}>
-                                <select
-                                  className="mini-move-select"
-                                  value={item.quadrant}
-                                  onChange={(e) => moveQuadrantItem(item.id, e.target.value as QuadrantKey)}
-                                >
-                                  <option value="important_not_urgent">↖</option>
-                                  <option value="important_urgent">↗</option>
-                                  <option value="not_important_not_urgent">↙</option>
-                                  <option value="not_important_urgent">↘</option>
-                                </select>
-                                <button className="schedule-box-btn" onClick={() => openTaskSchedule(item.id)}>▾</button>
-                              </div>
+                              <span>⋮⋮ {item.text}</span>
+                              <button className="schedule-box-btn" onClick={() => openTaskSchedule(item.id)}>▾</button>
                             </div>
 
                             {taskScheduleOpenId === item.id && (
