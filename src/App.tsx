@@ -834,9 +834,11 @@ function App() {
     const weekday = ['日', '一', '二', '三', '四', '五', '六']
     const dayBlocks = selectedWeek.days.map((d) => {
       const date = selectedWeekDates[d.day - 1]
+      const key = dateKey(date)
       return {
         title: `${date.getMonth() + 1}/${date.getDate()}(周${weekday[date.getDay()]})`,
         tasks: d.tasks,
+        diaries: diariesByDate[key] || [],
       }
     })
 
@@ -879,8 +881,34 @@ function App() {
     // 设置列宽（每一天两列）
     ws['!cols'] = dayBlocks.flatMap(() => [{ wch: 24 }, { wch: 8 }])
 
+    // 日记sheet：同样按“每天两列”导出（标题 / 内容）
+    const diaryAoa: any[][] = []
+    const diaryHeaderRow: string[] = []
+    dayBlocks.forEach((d) => diaryHeaderRow.push(d.title, ''))
+    diaryAoa.push(diaryHeaderRow)
+
+    const diarySubHeaderRow: string[] = []
+    dayBlocks.forEach(() => diarySubHeaderRow.push('日记标题', '日记内容'))
+    diaryAoa.push(diarySubHeaderRow)
+
+    const maxDiaryRows = Math.max(1, ...dayBlocks.map((x) => x.diaries.length))
+    for (let i = 0; i < maxDiaryRows; i++) {
+      const row: string[] = []
+      dayBlocks.forEach((d) => {
+        const entry = d.diaries[i]
+        row.push(entry ? entry.title : '')
+        row.push(entry ? entry.content : '')
+      })
+      diaryAoa.push(row)
+    }
+
+    const diaryWs = XLSX.utils.aoa_to_sheet(diaryAoa)
+    diaryWs['!merges'] = dayBlocks.map((_, i) => ({ s: { r: 0, c: i * 2 }, e: { r: 0, c: i * 2 + 1 } }))
+    diaryWs['!cols'] = dayBlocks.flatMap(() => [{ wch: 16 }, { wch: 36 }])
+
     const wb = XLSX.utils.book_new()
     XLSX.utils.book_append_sheet(wb, ws, '周计划')
+    XLSX.utils.book_append_sheet(wb, diaryWs, '周日记')
     XLSX.writeFile(wb, `plan-week-${selectedWeek.title}-${dateKey(new Date())}.xlsx`)
   }
 
