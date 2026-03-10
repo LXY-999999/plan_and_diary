@@ -436,6 +436,12 @@ function App() {
     setQuadrantItems((prev) => prev.map((x) => (x.id === itemId ? { ...x, quadrant: targetQuadrant } : x)))
   }
 
+  const deleteQuadrantItem = (itemId: string) => {
+    pushUndoSnapshot()
+    setQuadrantItems((prev) => prev.filter((x) => x.id !== itemId))
+    if (taskScheduleOpenId === itemId) setTaskScheduleOpenId(null)
+  }
+
   const onQuadrantItemDragStart = (itemId: string, event: any) => {
     setDraggingQuadrantItemId(itemId)
     event.dataTransfer.setData('text/plain', itemId)
@@ -1031,7 +1037,10 @@ function App() {
                           >
                             <div style={{ display: 'flex', justifyContent: 'space-between', gap: 6, alignItems: 'center' }}>
                               <span>⋮⋮ {item.text}</span>
-                              <button className="schedule-box-btn" onClick={() => openTaskSchedule(item.id)}>▾</button>
+                              <div style={{ display: 'flex', gap: 4, alignItems: 'center' }}>
+                                <button className="schedule-box-btn" onClick={() => openTaskSchedule(item.id)}>▾</button>
+                                <button className="schedule-box-btn" onClick={() => deleteQuadrantItem(item.id)}>✕</button>
+                              </div>
                             </div>
 
                             {taskScheduleOpenId === item.id && (
