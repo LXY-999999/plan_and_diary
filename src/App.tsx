@@ -405,9 +405,15 @@ function App() {
   }
 
   const openTaskSchedule = (itemId: string) => {
-    setTaskScheduleOpenId(itemId)
-    setTaskScheduleDays([])
-    setTaskScheduleSlot('上午')
+    setTaskScheduleOpenId((prev) => {
+      if (prev === itemId) {
+        setTaskScheduleDays([])
+        return null
+      }
+      setTaskScheduleDays([])
+      setTaskScheduleSlot('上午')
+      return itemId
+    })
   }
 
   const toggleTaskScheduleDay = (dayNum: number) => {
@@ -431,7 +437,7 @@ function App() {
           ...w,
           days: w.days.map((d) => {
             if (!taskScheduleDays.includes(d.day)) return d
-            return { ...d, tasks: [...d.tasks, { id: uuid(), text: `[四象限] ${item.text}`, slot: taskScheduleSlot }] }
+            return { ...d, tasks: [...d.tasks, { id: uuid(), text: item.text, slot: taskScheduleSlot }] }
           }),
         }
       }),
