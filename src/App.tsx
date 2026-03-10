@@ -15,7 +15,7 @@ type DiaryEntry = {
   location?: string
 }
 type DayPlan = { day: number; tasks: DayTask[] }
-type WeekGoal = { id: string; title: string; days: DayPlan[] }
+type WeekGoal = { id: string; title: string; days: DayPlan[]; startDate: string }
 type Theme = 'genki' | 'mint'
 type GoalType = '年目标' | '月目标'
 type Page = 'plan' | 'diary'
@@ -37,6 +37,23 @@ const STORAGE_KEY = 'plan_and_diary_v1'
 const emptyDays = (): DayPlan[] => Array.from({ length: 7 }, (_, i) => ({ day: i + 1, tasks: [] }))
 const uuid = () => Math.random().toString(36).slice(2, 10)
 const dateKey = (d: Date) => `${d.getFullYear()}-${d.getMonth() + 1}-${d.getDate()}`
+const normalizeDate = (d: Date) => {
+  const x = new Date(d)
+  x.setHours(0, 0, 0, 0)
+  return x
+}
+const parseDateKey = (key: string) => {
+  const [y, m, d] = key.split('-').map(Number)
+  return normalizeDate(new Date(y, (m || 1) - 1, d || 1))
+}
+const buildWeekDates = (startDateKey: string) => {
+  const start = parseDateKey(startDateKey)
+  return Array.from({ length: 7 }, (_, i) => {
+    const d = new Date(start)
+    d.setDate(start.getDate() + i)
+    return d
+  })
+}
 
 function App() {
   const [theme, setTheme] = useState<Theme>('genki')
@@ -78,15 +95,12 @@ function App() {
   const [editingDiaryTitle, setEditingDiaryTitle] = useState('')
   const [editingDiaryContent, setEditingDiaryContent] = useState('')
 
-  const weekDates = useMemo(() => {
-    const start = new Date()
-    start.setHours(0, 0, 0, 0)
-    return Array.from({ length: 7 }, (_, i) => {
-      const d = new Date(start)
-      d.setDate(start.getDate() + i)
-      return d
-    })
-  }, [])
+  const fallbackWeekStart = useMemo(() => dateKey(normalizeDate(new Date())), [])
+
+  const selectedWeekDates = useMemo(() => {
+    const start = selectedWeek?.startDate || fallbackWeekStart
+    return buildWeekDates(start)
+  }, [selectedWeek?.startDate, fallbackWeekStart])
 
   const monthMatrix = useMemo(() => {
     const now = new Date()
@@ -115,6 +129,7 @@ function App() {
       if (Array.isArray(data.weekGoals)) {
         const normalized = data.weekGoals.map((w) => ({
           ...w,
+          startDate: typeof w.startDate === 'string' ? w.startDate : dateKey(normalizeDate(new Date())),
           days: (w.days || emptyDays()).map((d, i) => ({
             day: typeof d.day === 'number' ? d.day : i + 1,
             tasks: Array.isArray(d.tasks) ? d.tasks : [],
@@ -146,7 +161,7 @@ function App() {
 
   const addWeek = () => {
     if (!weekTitle.trim()) return
-    const w: WeekGoal = { id: uuid(), title: weekTitle.trim(), days: emptyDays() }
+    const w: WeekGoal = { id: uuid(), title: weekTitle.trim(), days: emptyDays(), startDate: dateKey(normalizeDate(new Date())) }
     setWeekGoals((prev) => [...prev, w])
     setSelectedWeekId(w.id)
     setWeekTitle('')
@@ -250,7 +265,7 @@ function App() {
 
   const addDiary = () => {
     if (!diaryContent.trim()) return
-    const targetDate = weekDates[diaryDay - 1]
+    const targetDate = selectedWeekDates[diaryDay - 1]
     const key = dateKey(targetDate)
     const autoTitle = diaryContent.trim().slice(0, 14) + (diaryContent.trim().length > 14 ? '...' : '')
     const entry: DiaryEntry = {
@@ -442,11 +457,11 @@ function App() {
 
   const weekDayNumberByDateKey = useMemo(() => {
     const map: Record<string, number> = {}
-    weekDates.forEach((d, idx) => {
+    selectedWeekDates.forEach((d, idx) => {
       map[dateKey(d)] = idx + 1
     })
     return map
-  }, [weekDates])
+  }, [selectedWeekDates])
 
   const diaryHistory = useMemo(() => {
     const all: Array<{ date: Date; dateLabel: string; key: string; entry: DiaryEntry }> = []
@@ -536,7 +551,7 @@ function App() {
             <h2>3) 周 → 日(早中晚)</h2>
             <div className="row">
               <select value={day} onChange={(e) => setDay(Number(e.target.value))}>
-                {weekDates.map((d, i) => (
+                {selectedWeekDates.map((d, i) => (
                   <option key={i + 1} value={i + 1}>{d.getMonth() + 1}月{d.getDate()}日</option>
                 ))}
               </select>
@@ -596,7 +611,7 @@ function App() {
                 {todoView === 'week' ? (
                   <div className="week-grid">
                     {selectedWeek.days.map((d) => {
-                      const actual = weekDates[d.day - 1]
+                      const actual = selectedWeekDates[d.day - 1]
                       const key = dateKey(actual)
                       const dayDiaries = diariesByDate[key] || []
                       return (
@@ -730,7 +745,7 @@ function App() {
             {diaryExpanded && (
               <>
                 <select value={diaryDay} onChange={(e) => setDiaryDay(Number(e.target.value))}>
-                  {weekDates.map((d, i) => (
+                  {selectedWeekDates.map((d, i) => (
                     <option key={i + 1} value={i + 1}>保存到 {d.getMonth() + 1}月{d.getDate()}日（晚上）</option>
                   ))}
                 </select>
