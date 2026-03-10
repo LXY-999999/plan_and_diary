@@ -15,24 +15,44 @@ button:hover { opacity:.9; }
 .chip.active { background:#111; color:#fff; }
 .flow-wrap .flow { height: 420px; border:1px dashed #ddd; border-radius:10px; overflow:hidden; }
 .week-grid { display:grid; grid-template-columns: repeat(7, minmax(180px,1fr)); gap:10px; overflow:auto; }
-@media (max-width: 1200px) {
-  .week-grid { grid-template-columns: repeat(4, minmax(180px,1fr)); }
+
+/* 固定响应式规则（定死） */
+@media (max-width: 1440px) {
+  .week-grid { grid-template-columns: repeat(5, minmax(180px,1fr)); }
+  .month-grid { grid-template-columns: repeat(7, minmax(110px,1fr)); }
 }
-@media (max-width: 900px) {
+
+@media (max-width: 1200px) {
+  .app { padding: 14px; }
+  .week-grid { grid-template-columns: repeat(4, minmax(170px,1fr)); }
+  .month-grid { grid-template-columns: repeat(5, minmax(120px,1fr)); }
+}
+
+@media (max-width: 992px) {
   .app { padding: 12px; }
   .panel { padding: 12px; border-radius: 14px; }
-  .week-grid { grid-template-columns: repeat(2, minmax(150px,1fr)); }
+  .week-grid { grid-template-columns: repeat(3, minmax(150px,1fr)); }
   .month-grid { grid-template-columns: repeat(4, minmax(120px,1fr)); }
+  .flow-wrap .flow { height: 340px; }
 }
-@media (max-width: 640px) {
+
+@media (max-width: 768px) {
+  header { position: static; }
   .row { flex-direction: column; align-items: stretch; }
   input, select, textarea, button { width: 100%; }
-  .theme-switch { width: 100%; display:flex; gap:8px; }
-  .theme-switch button { margin-left: 0; flex:1; }
+  .theme-switch { width: 100%; display:flex; gap:8px; flex-wrap: wrap; }
+  .theme-switch button { margin-left: 0; flex:1; min-width: 120px; }
+  .week-grid { grid-template-columns: repeat(2, minmax(140px,1fr)); }
+  .month-grid { grid-template-columns: repeat(3, minmax(110px,1fr)); }
+  .bottom-nav { padding-left: 8px; padding-right: 8px; }
+}
+
+@media (max-width: 576px) {
+  .app { padding: 10px; }
   .week-grid { grid-template-columns: 1fr; }
   .month-grid { grid-template-columns: repeat(2, minmax(120px,1fr)); }
   .flow-wrap .flow { height: 300px; }
-  .bottom-nav { padding-left: 8px; padding-right: 8px; }
+  .compose-title { font-size: 22px; }
 }
 .day-card { background:#fafafa; border:1px solid #eee; border-radius:12px; padding:8px; }
 .day-card h3 { margin:0 0 6px; }
