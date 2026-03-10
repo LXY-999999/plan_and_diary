@@ -720,7 +720,7 @@ function App() {
   }, [saveStatus, lastSavedAt])
 
   const flow = useMemo(() => {
-    const nodes: Node[] = [{ id: 'root', data: { label: `${goalType}: ${rootGoal || '未设置'}` }, position: { x: 260, y: 20 } }]
+    const nodes: Node[] = [{ id: 'root', data: { label: '周目标总览' }, position: { x: 260, y: 20 } }]
     const edges: Edge[] = []
 
     weekGoals.forEach((w, wi) => {
@@ -752,22 +752,9 @@ function App() {
       {page === 'plan' ? (
         <>
           <section className="panel">
-            <h2>1) 目标入口</h2>
-            <div className="row">
-              <select value={goalType} onChange={(e) => setGoalType(e.target.value as GoalType)}>
-                <option value="年目标">年目标</option>
-                <option value="月目标">月目标</option>
-              </select>
-              <input value={rootGoal} onChange={(e) => setRootGoal(e.target.value)} placeholder="输入你的目标" />
-            </div>
+            <h2>1) 周目标</h2>
             <div className="row">
               <input value={username} onChange={(e) => setUsername(e.target.value)} placeholder="用户名（用于自动分文件夹归档）" />
-            </div>
-          </section>
-
-          <section className="panel">
-            <h2>2) 月/年 → 周目标</h2>
-            <div className="row">
               <input value={weekTitle} onChange={(e) => setWeekTitle(e.target.value)} placeholder="新增周目标" />
               <button onClick={addWeek}>添加周目标</button>
             </div>
@@ -781,7 +768,7 @@ function App() {
           </section>
 
           <section className="panel">
-            <h2>3) 周 → 日(早中晚)</h2>
+            <h2>2) 周 → 日(早中晚)</h2>
             <div className="row">
               <select value={day} onChange={(e) => setDay(Number(e.target.value))}>
                 {selectedWeekDates.map((d, i) => (
@@ -808,7 +795,7 @@ function App() {
           </section>
 
           <section className="panel">
-            <h2>4) 计划四象限（艾森豪威尔）</h2>
+            <h2>3) 计划四象限（艾森豪威尔）</h2>
             <div className="row">
               <select value={quadrantType} onChange={(e) => setQuadrantType(e.target.value as QuadrantKey)}>
                 <option value="important_urgent">重要且紧急</option>

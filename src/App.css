@@ -4,8 +4,8 @@ body { margin: 0; background: #f7f8fc; }
 .app { max-width: 1200px; margin: 0 auto; padding: 16px; }
 header { display:flex; justify-content:space-between; align-items:center; margin-bottom: 12px; gap:10px; flex-wrap:wrap; }
 h1 { margin:0; font-size: clamp(20px, 4vw, 32px); }
-.panel { background:#fff; border-radius:16px; padding:14px; margin-bottom:12px; box-shadow:0 6px 16px rgba(0,0,0,.06); }
-.row { display:flex; gap:8px; flex-wrap:wrap; }
+.panel { background:#fff; border-radius:14px; padding:12px; margin-bottom:10px; box-shadow:0 6px 16px rgba(0,0,0,.06); }
+.row { display:flex; gap:6px; flex-wrap:wrap; }
 input, select, textarea, button { border-radius:10px; border:1px solid #ddd; padding:8px 10px; font-size:14px; }
 input, select, textarea { background:#fff; }
 button { cursor:pointer; background:#111; color:#fff; border:none; }
