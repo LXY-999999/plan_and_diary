@@ -17,7 +17,8 @@ type DiaryEntry = {
 }
 type DayPlan = { day: number; tasks: DayTask[] }
 type WeekGoal = { id: string; title: string; days: DayPlan[]; startDate: string }
-type PlanTreeNode = { id: string; label: string; leftId?: string; rightId?: string }
+type GoalLayer = '总目标' | '年目标' | '月目标' | '周目标'
+type PlanTreeNode = { id: string; label: string; goalLayer: GoalLayer; leftId?: string; rightId?: string }
 type Theme = 'genki' | 'mint'
 type GoalType = '年目标' | '月目标'
 type Page = 'plan' | 'diary'
@@ -82,7 +83,7 @@ const buildWeekDates = (startDateKey: string) => {
   })
 }
 
-const defaultPlanTree = (): PlanTreeNode[] => [{ id: 'root', label: '本周总目标' }]
+const defaultPlanTree = (): PlanTreeNode[] => [{ id: 'root', label: '总目标', goalLayer: '总目标' }]
 
 function App() {
   const [theme, setTheme] = useState<Theme>('genki')
@@ -113,6 +114,7 @@ function App() {
   const [planTreeNodes, setPlanTreeNodes] = useState<PlanTreeNode[]>(defaultPlanTree())
   const [selectedTreeNodeId, setSelectedTreeNodeId] = useState('root')
   const [treeNodeLabelInput, setTreeNodeLabelInput] = useState('')
+  const [treeNodeLayerInput, setTreeNodeLayerInput] = useState<GoalLayer>('总目标')
 
   const [selectedWeekId, setSelectedWeekId] = useState<string>('')
   const selectedWeek = weekGoals.find((w) => w.id === selectedWeekId)
@@ -222,7 +224,14 @@ function App() {
       if (data.diariesByDate && typeof data.diariesByDate === 'object') setDiariesByDate(data.diariesByDate)
       if (typeof data.username === 'string' && data.username.trim()) setUsername(data.username)
       if (Array.isArray(data.quadrantItems)) setQuadrantItems(data.quadrantItems)
-      if (Array.isArray(data.planTreeNodes) && data.planTreeNodes.length) setPlanTreeNodes(data.planTreeNodes)
+      if (Array.isArray(data.planTreeNodes) && data.planTreeNodes.length) {
+        setPlanTreeNodes(
+          data.planTreeNodes.map((n: any, idx: number) => ({
+            ...n,
+            goalLayer: (n?.goalLayer as GoalLayer) || (idx === 0 ? '总目标' : '周目标'),
+          })),
+        )
+      }
     } catch (e) {
       console.warn('读取本地数据失败，已忽略。', e)
     }
@@ -318,7 +327,10 @@ function App() {
 
   useEffect(() => {
     const current = planTreeNodes.find((n) => n.id === selectedTreeNodeId)
-    if (current) setTreeNodeLabelInput(current.label)
+    if (current) {
+      setTreeNodeLabelInput(current.label)
+      setTreeNodeLayerInput(current.goalLayer)
+    }
   }, [selectedTreeNodeId, planTreeNodes])
 
   useEffect(() => {
@@ -690,7 +702,8 @@ function App() {
     setQuadrantItems([])
     setPlanTreeNodes(defaultPlanTree())
     setSelectedTreeNodeId('root')
-    setTreeNodeLabelInput('本周总目标')
+    setTreeNodeLabelInput('总目标')
+    setTreeNodeLayerInput('总目标')
     setTaskScheduleOpenId(null)
     setTaskScheduleDays([])
     setTaskScheduleSlot('上午')
@@ -912,19 +925,40 @@ function App() {
     }
     pushUndoSnapshot()
     const newId = uuid()
+    const nextLayer: GoalLayer =
+      selectedTreeNode.goalLayer === '总目标'
+        ? '年目标'
+        : selectedTreeNode.goalLayer === '年目标'
+          ? '月目标'
+          : '周目标'
+
     setPlanTreeNodes((prev) =>
       prev
         .map((n) => (n.id === selectedTreeNode.id ? { ...n, ...(side === 'left' ? { leftId: newId } : { rightId: newId }) } : n))
-        .concat([{ id: newId, label: '新节点' }]),
+        .concat([{ id: newId, label: `${nextLayer}`, goalLayer: nextLayer }]),
     )
     setSelectedTreeNodeId(newId)
-    setTreeNodeLabelInput('新节点')
+    setTreeNodeLabelInput(`${nextLayer}`)
+    setTreeNodeLayerInput(nextLayer)
+  }
+
+  const updateTreeNodeLayer = (layer: GoalLayer) => {
+    setTreeNodeLayerInput(layer)
+    if (!selectedTreeNodeId) return
+    pushUndoSnapshot()
+    setPlanTreeNodes((prev) => prev.map((n) => (n.id === selectedTreeNodeId ? { ...n, goalLayer: n.id === 'root' ? '总目标' : layer } : n)))
   }
 
   const renameTreeNode = () => {
     if (!selectedTreeNodeId || !treeNodeLabelInput.trim()) return
     pushUndoSnapshot()
-    setPlanTreeNodes((prev) => prev.map((n) => (n.id === selectedTreeNodeId ? { ...n, label: treeNodeLabelInput.trim() } : n)))
+    setPlanTreeNodes((prev) =>
+      prev.map((n) =>
+        n.id === selectedTreeNodeId
+          ? { ...n, label: treeNodeLabelInput.trim(), goalLayer: n.id === 'root' ? '总目标' : treeNodeLayerInput }
+          : n,
+      ),
+    )
   }
 
   const flow = useMemo(() => {
@@ -942,7 +976,7 @@ function App() {
 
       const count = Math.max(1, 2 ** cur.level)
       const offset = (cur.index - (count - 1) / 2) * 220
-      nodes.push({ id: node.id, data: { label: node.label }, position: { x: offset + 380, y: 30 + cur.level * 110 } })
+      nodes.push({ id: node.id, data: { label: `${node.goalLayer}｜${node.label}` }, position: { x: offset + 380, y: 30 + cur.level * 110 } })
 
       if (node.leftId) {
         edges.push({ id: `e-${node.id}-${node.leftId}`, source: node.id, target: node.leftId })
@@ -1068,8 +1102,14 @@ function App() {
               <div className="row" style={{ marginTop: 8 }}>
                 <select value={selectedTreeNodeId} onChange={(e) => { setSelectedTreeNodeId(e.target.value); setTreeNodeLabelInput(planTreeNodes.find((n) => n.id === e.target.value)?.label || '') }}>
                   {planTreeNodes.map((n) => (
-                    <option key={n.id} value={n.id}>{n.label}</option>
+                    <option key={n.id} value={n.id}>{`${n.goalLayer}｜${n.label}`}</option>
                   ))}
+                </select>
+                <select value={treeNodeLayerInput} onChange={(e) => updateTreeNodeLayer(e.target.value as GoalLayer)} disabled={selectedTreeNodeId === 'root'}>
+                  <option value="总目标">总目标</option>
+                  <option value="年目标">年目标</option>
+                  <option value="月目标">月目标</option>
+                  <option value="周目标">周目标</option>
                 </select>
                 <input value={treeNodeLabelInput} onChange={(e) => setTreeNodeLabelInput(e.target.value)} placeholder="节点名称" />
                 <button onClick={renameTreeNode}>重命名</button>
