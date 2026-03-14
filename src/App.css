@@ -82,6 +82,7 @@ button:hover { opacity:.9; }
   .bottom-nav { gap: 6px; padding: 8px 8px calc(8px + env(safe-area-inset-bottom)); }
 }
 .day-card { background:#fafafa; border:1px solid #eee; border-radius:10px; padding:6px; }
+.day-card.today { border-color:#60a5fa; box-shadow: 0 0 0 2px rgba(96,165,250,.12); background: linear-gradient(180deg, rgba(239,246,255,.9), rgba(250,250,250,.95)); }
 .day-card h3 { margin:0 0 4px; font-size:14px; }
 .day-card h4 { margin:6px 0 3px; font-size:13px; color:#666; }
 .week-slot-drop-target { outline: 2px dashed #60a5fa; outline-offset: 3px; border-radius: 8px; background: rgba(96,165,250,.08); }
@@ -150,6 +151,7 @@ button:hover { opacity:.9; }
 .month-grid { display:grid; grid-template-columns: repeat(7, minmax(120px,1fr)); gap:8px; }
 .month-weekday { text-align:center; color:#666; font-size:12px; }
 .month-cell { background:#fafafa; border:1px solid #eee; border-radius:10px; padding:8px; min-height:150px; }
+.month-cell.today { border-color:#60a5fa; box-shadow: 0 0 0 2px rgba(96,165,250,.12); background: linear-gradient(180deg, rgba(239,246,255,.92), rgba(250,250,250,.96)); }
 .month-cell.empty { background:transparent; border:none; }
 .mini-block { margin-bottom:6px; }
 .mini-task { font-size:12px; background:#fff; border:1px solid #eee; border-radius:6px; padding:2px 4px; margin-top:3px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }

@@ -83,6 +83,11 @@ const buildWeekDates = (startDateKey: string) => {
   })
 }
 
+const isDateInWeek = (targetDateKey: string, startDateKey: string) => {
+  const target = parseDateKey(targetDateKey).getTime()
+  return buildWeekDates(startDateKey).some((d) => d.getTime() === target)
+}
+
 const defaultPlanTree = (): PlanTreeNode[] => [{ id: 'root', label: '总目标', goalLayer: '总目标' }]
 
 function App() {
@@ -146,10 +151,15 @@ function App() {
 
   const fallbackWeekStart = useMemo(() => dateKey(normalizeDate(new Date())), [])
 
+  const currentWeekGoal = useMemo(
+    () => weekGoals.find((w) => isDateInWeek(todayMarker, w.startDate)) || null,
+    [weekGoals, todayMarker],
+  )
+
   const selectedWeekDates = useMemo(() => {
-    const start = selectedWeek?.startDate || fallbackWeekStart
+    const start = selectedWeek?.startDate || currentWeekGoal?.startDate || fallbackWeekStart
     return buildWeekDates(start)
-  }, [selectedWeek?.startDate, fallbackWeekStart])
+  }, [selectedWeek?.startDate, currentWeekGoal?.startDate, fallbackWeekStart])
 
   const todayDiaryDay = useMemo(() => {
     const idx = selectedWeekDates.findIndex((d) => dateKey(d) === todayMarker)
@@ -165,6 +175,19 @@ function App() {
     }, 60 * 1000)
     return () => window.clearInterval(timer)
   }, [])
+
+  useEffect(() => {
+    if (!weekGoals.length) return
+
+    if (currentWeekGoal && selectedWeekId !== currentWeekGoal.id) {
+      setSelectedWeekId(currentWeekGoal.id)
+      return
+    }
+
+    if (!selectedWeekId || !weekGoals.some((w) => w.id === selectedWeekId)) {
+      setSelectedWeekId(weekGoals[0].id)
+    }
+  }, [weekGoals, currentWeekGoal, selectedWeekId])
 
   useEffect(() => {
     setDiaryDay(todayDiaryDay)
@@ -1269,10 +1292,14 @@ function App() {
                     {selectedWeek.days.map((d) => {
                       const actual = selectedWeekDates[d.day - 1]
                       const key = dateKey(actual)
+                      const isToday = key === todayMarker
                       const dayDiaries = diariesByDate[key] || []
                       return (
-                        <div key={d.day} className="day-card">
-                          <h3>{actual.getMonth() + 1}月{actual.getDate()}日</h3>
+                        <div key={d.day} className={`day-card ${isToday ? 'today' : ''}`}>
+                          <h3>
+                            {actual.getMonth() + 1}月{actual.getDate()}日
+                            {isToday ? ' · 今天' : ''}
+                          </h3>
                           {(['上午', '下午', '晚上'] as Slot[]).map((s) => (
                             <div
                               key={s}
@@ -1403,8 +1430,8 @@ function App() {
                       const dayDiaries = diariesByDate[key] || []
 
                       return (
-                        <div key={key} className="month-cell">
-                          <h4>{dt.getMonth() + 1}月{dt.getDate()}日</h4>
+                        <div key={key} className={`month-cell ${key === todayMarker ? 'today' : ''}`}>
+                          <h4>{dt.getMonth() + 1}月{dt.getDate()}日{key === todayMarker ? ' · 今天' : ''}</h4>
                           {(['上午', '下午', '晚上'] as Slot[]).map((s) => (
                             <div key={s} className="mini-block">
                               <small>{s}</small>
