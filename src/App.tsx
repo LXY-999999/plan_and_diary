@@ -151,6 +151,13 @@ function App() {
     return buildWeekDates(start)
   }, [selectedWeek?.startDate, fallbackWeekStart])
 
+  const todayDiaryDay = useMemo(() => {
+    const idx = selectedWeekDates.findIndex((d) => dateKey(d) === todayMarker)
+    return idx >= 0 ? idx + 1 : 1
+  }, [selectedWeekDates, todayMarker])
+
+  const selectedDiaryDate = selectedWeekDates[Math.max(0, Math.min(selectedWeekDates.length - 1, diaryDay - 1))] || selectedWeekDates[0]
+
   useEffect(() => {
     const timer = window.setInterval(() => {
       const nowKey = dateKey(normalizeDate(new Date()))
@@ -160,14 +167,15 @@ function App() {
   }, [])
 
   useEffect(() => {
+    setDiaryDay(todayDiaryDay)
+  }, [todayDiaryDay, selectedWeekId])
+
+  useEffect(() => {
     try {
       const last = localStorage.getItem(DAILY_RESET_KEY)
       if (last === todayMarker) return
 
-      const idx = selectedWeekDates.findIndex((d) => dateKey(d) === todayMarker)
-      const targetDay = idx >= 0 ? idx + 1 : 1
-
-      setDiaryDay(targetDay)
+      setDiaryDay(todayDiaryDay)
       setDiaryTitle('')
       setDiaryContent('')
       setDiaryImages([])
@@ -182,7 +190,7 @@ function App() {
     } catch (e) {
       console.warn('每日计划重置失败，已忽略。', e)
     }
-  }, [todayMarker, selectedWeekDates])
+  }, [todayMarker, todayDiaryDay])
 
   const monthMatrix = useMemo(() => {
     const now = new Date()
@@ -1444,7 +1452,14 @@ function App() {
           <div className="compose-card" onClick={() => setDiaryExpanded(true)}>
             <div className="compose-top">
               <div className="avatar-dot">🍩</div>
-              <div className="compose-title">写点什么吧</div>
+              <div>
+                <div className="compose-title">写点什么吧</div>
+                {selectedDiaryDate && (
+                  <div className="compose-date-label">
+                    默认日期：今天（{selectedDiaryDate.getMonth() + 1}月{selectedDiaryDate.getDate()}日）
+                  </div>
+                )}
+              </div>
             </div>
 
             {diaryExpanded && (
